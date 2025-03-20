@@ -78,25 +78,54 @@ void on_pwm_wrap() {
 //-----------------------------------------------------------------------------------
 // OUR CODE IS BELOW THIS
 //-----------------------------------------------------------------------------------
-    // Convert fix15 to float
+    // Convert fix15 to standard floats for easier calculation
     float ax = fix2float15(acceleration[0]);
     float ay = fix2float15(acceleration[1]);
     float az = fix2float15(acceleration[2]);
     float gx = fix2float15(gyro[0]); 
 
-    //Calculating the acceleromator pitch
-    //We just take the arctan of the magnitude and then convert to degrees
-    float pitch_acc_deg = atan2f(ay, sqrtf(ax*ax + az*az)) * (180.0f / M_PI);
+    //ATTEMPT AT CORRECTING BIAS, NEED TO PLAY AROUND WITH IT 
+    //float gyro_bias_x = 0.5;  
+    //float gx_corrected = gx - gyro_bias_x;
 
-    //Integrating the gyroscope data
-    pitch_gyro_deg += gx * dt;
+    // Calculating pitch angle
+    float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / M_PI);
 
-    // 3) Complementary filter
-    pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha)*pitch_acc_deg;
+    // Integrating gyro rate to estimate pitch change over time
+    float dt = 0.001;  // Sampling time (1ms spec from lab demo)
+    pitch_gyro_deg += gx * dt;  // Integrate angular velocity
 
+    //-------------------------------------------------------------------
+    //Still gotta get this straightened out
+    //pitch_gyro_deg += gx_corrected * dt;  // With Bias Accounted For
+
+    // Complementary filter to fuse accelerometer and gyro estimates
+    //Low pass on the accelerometer, high-pass on gyro readings
+    float alpha = 0.98;
+    pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha) * pitch_acc_deg;
+
+    // 4) PID control
+    float error = target_angle - pitch_deg;
+    integral += error * dt; // Integral term
+    float derivative = (error - prev_error) / dt;
+    prev_error = error;
+
+    // Compute PID output
+    float motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
+
+    // Convert PID output to PWM duty cycle
+    uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500); // Scale appropriately
+
+    // Limit motor power to safe values
+    if (pwm_value > 5000) pwm_value = 5000;
+    if (pwm_value < 0) pwm_value = 0;
+
+    // Set motor PWM duty cycle
+    pwm_set_chan_level(slice_num, PWM_CHAN_A, pwm_value);
 
     // Signal VGA to draw
     PT_SEM_SIGNAL(pt, &vga_semaphore);
+
 }
 
 // Thread that draws to VGA display
