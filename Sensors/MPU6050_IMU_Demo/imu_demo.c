@@ -69,18 +69,31 @@ void on_pwm_wrap() {
     // Clear the interrupt flag that brought us here
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
 
-//-----------------------------------------------------------------------------------
-// OUR CODE IS BELOW THIS
-//-----------------------------------------------------------------------------------
-
-    // Read raw IMU data
-    mpu6050_read_raw(acceleration, gyro);
-
     // Read the IMU
     // NOTE! This is in 15.16 fixed point. Accel in g's, gyro in deg/s
     // If you want these values in floating point, call fix2float15() on
     // the raw measurements.
     mpu6050_read_raw(acceleration, gyro);
+
+//-----------------------------------------------------------------------------------
+// OUR CODE IS BELOW THIS
+//-----------------------------------------------------------------------------------
+    // Convert fix15 to float
+    float ax = fix2float15(acceleration[0]);
+    float ay = fix2float15(acceleration[1]);
+    float az = fix2float15(acceleration[2]);
+    float gx = fix2float15(gyro[0]); 
+
+    //Calculating the acceleromator pitch
+    //We just take the arctan of the magnitude and then convert to degrees
+    float pitch_acc_deg = atan2f(ay, sqrtf(ax*ax + az*az)) * (180.0f / M_PI);
+
+    //Integrating the gyroscope data
+    pitch_gyro_deg += gx * dt;
+
+    // 3) Complementary filter
+    pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha)*pitch_acc_deg;
+
 
     // Signal VGA to draw
     PT_SEM_SIGNAL(pt, &vga_semaphore);
