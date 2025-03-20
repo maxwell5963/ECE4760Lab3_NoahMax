@@ -69,6 +69,13 @@ void on_pwm_wrap() {
     // Clear the interrupt flag that brought us here
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
 
+//-----------------------------------------------------------------------------------
+// OUR CODE IS BELOW THIS
+//-----------------------------------------------------------------------------------
+
+    // Read raw IMU data
+    mpu6050_read_raw(acceleration, gyro);
+
     // Read the IMU
     // NOTE! This is in 15.16 fixed point. Accel in g's, gyro in deg/s
     // If you want these values in floating point, call fix2float15() on
