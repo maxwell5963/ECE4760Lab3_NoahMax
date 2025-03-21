@@ -73,6 +73,7 @@ static float prev_error = 0.0f;     // Previous error for derivative term
 static float motor_command = 0.0f;  // Stores PID output for plotting
 static float error = 0.0f;          // Stores error for plotting
 static float derivative = 0.0f;     // Stores derivative term for plotting
+static float gx_corrected;
 
 // PID Constants (TUNE THESE)
 static float Kp = 1.5;  
@@ -134,7 +135,7 @@ void on_pwm_wrap() {
 }
 
 
-
+// Thread that draws to VGA display
 // Thread that draws to VGA display
 static PT_THREAD (protothread_vga(struct pt *pt)) {
     PT_BEGIN(pt);
@@ -142,8 +143,8 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
     static int xcoord = 81;  
     static int throttle;
     static float OldRange = 90.0;  
-    static float NewRange = 150.0; 
-    static float OldMin = -45.0;   
+    static float NewRange = 180.0; 
+    static float OldMin = -90.0;   
 
     setTextSize(1);
     setTextColor(WHITE);
@@ -161,7 +162,7 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
         if (throttle >= threshold) { 
             throttle = 0;  
 
-            // Erase previous column
+            // Erase previous column to keep graph clean
             drawVLine(xcoord, 0, 480, BLACK);
 
             // **Plot actual angle from complementary filter (`pitch_deg`)**
@@ -170,26 +171,33 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             // **Plot target angle (`target_angle`)**
             drawPixel(xcoord, 230 - (int)(NewRange * ((target_angle - OldMin) / OldRange)), RED);
 
-            // Scroll horizontally
+            // Scroll horizontally for real-time effect
             if (xcoord < 609) {
                 xcoord += 1;
             } else {
                 xcoord = 81; 
             }
 
-            // **Display PID values as text**
+            // **Clear old text by drawing black rectangles**
+            #define TEXT_BG_WIDTH  140
+            #define TEXT_BG_HEIGHT 10
+
+            fillRect(10, 10, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
             setCursor(10, 10); setTextColor(WHITE);
             sprintf(screentext, "P: %.2f", Kp * error);
             writeString(screentext);
 
+            fillRect(10, 30, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
             setCursor(10, 30); setTextColor(YELLOW);
             sprintf(screentext, "I: %.2f", Ki * integral);
             writeString(screentext);
 
+            fillRect(10, 50, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
             setCursor(10, 50); setTextColor(MAGENTA);
             sprintf(screentext, "D: %.2f", Kd * derivative);
             writeString(screentext);
 
+            fillRect(10, 70, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
             setCursor(10, 70); setTextColor(GREEN);
             sprintf(screentext, "Motor Cmd: %.2f", motor_command);
             writeString(screentext);
@@ -197,8 +205,6 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
     }
     PT_END(pt);
 }
-
-
 
 // User input thread. User can change draw speed
 static PT_THREAD (protothread_serial(struct pt *pt))
