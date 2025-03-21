@@ -98,19 +98,19 @@ void on_pwm_wrap() {
     float gx = fix2float15(gyro[0]); 
 
     //ATTEMPT AT CORRECTING BIAS, NEED TO PLAY AROUND WITH IT 
-    //float gyro_bias_x = 0.5;  
-    //float gx_corrected = gx - gyro_bias_x;
+    float gyro_bias_x = 0.5;  
+    float gx_corrected = gx - gyro_bias_x;
 
     // Calculating pitch angle
     float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / 3.1415);
 
     // Integrating gyro rate to estimate pitch change over time
     float dt = 0.001;  // Sampling time (1ms spec from lab demo)
-    pitch_gyro_deg += gx * dt;  // Integrate angular velocity
+    //pitch_gyro_deg += gx * dt;  // Integrate angular velocity
 
     //-------------------------------------------------------------------
     //Still gotta get this straightened out
-    //pitch_gyro_deg += gx_corrected * dt;  // With Bias Accounted For
+    pitch_gyro_deg += gx_corrected * dt;  // With Bias Accounted For
 
     // Complementary filter to fuse accelerometer and gyro estimates
     //Low pass on the accelerometer, high-pass on gyro readings
