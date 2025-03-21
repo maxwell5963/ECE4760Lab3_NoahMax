@@ -1,34 +1,21 @@
 /**
- * V. Hunter Adams (vha3@cornell.edu)
+ * MPU6050 Complementary Filter & PID Control with VGA Plotting
  * 
- * This demonstration utilizes the MPU6050.
- * It gathers raw accelerometer/gyro measurements, scales
- * them, and plots them to the VGA display. The top plot
- * shows gyro measurements, bottom plot shows accelerometer
- * measurements.
- * 
- * HARDWARE CONNECTIONS
- *  - GPIO 16 ---> VGA Hsync
- *  - GPIO 17 ---> VGA Vsync
- *  - GPIO 18 ---> 330 ohm resistor ---> VGA Red
- *  - GPIO 19 ---> 330 ohm resistor ---> VGA Green
- *  - GPIO 20 ---> 330 ohm resistor ---> VGA Blue
- *  - RP2040 GND ---> VGA GND
- *  - GPIO 8 ---> MPU6050 SDA
- *  - GPIO 9 ---> MPU6050 SCL
- *  - 3.3v ---> MPU6050 VCC
- *  - RP2040 GND ---> MPU6050 GND
+ * Implements a complementary filter using fixed-point math to estimate pitch angle.
+ * The estimated angle is used in a PID controller to stabilize a helicopter arm.
+ * The results are displayed on a VGA screen.
  */
-
 
 // Include standard libraries
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+
 // Include PICO libraries
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
+
 // Include hardware libraries
 #include "hardware/pwm.h"
 #include "hardware/dma.h"
@@ -36,94 +23,85 @@
 #include "hardware/adc.h"
 #include "hardware/pio.h"
 #include "hardware/i2c.h"
+
 // Include custom libraries
 #include "vga16_graphics.h"
 #include "mpu6050.h"
 #include "pt_cornell_rp2040_v1_3.h"
 
-
-// Arrays in which raw measurements will be stored
+// Arrays to store raw IMU measurements
 fix15 acceleration[3], gyro[3];
 
-// character array
+// Screen text buffer
 char screentext[40];
 
-// draw speed
-int threshold = 10 ;
+// Drawing speed control
+int threshold = 10;
 
-// Some macros for max/min/abs
-#define min(a,b) ((a<b) ? a:b)
-#define max(a,b) ((a<b) ? b:a)
-#define abs(a) ((a>0) ? a:-a)
+// Semaphore for VGA update
+static struct pt_sem vga_semaphore;
 
-// semaphore
-static struct pt_sem vga_semaphore ;
-
-// Some paramters for PWM
+// PWM Configuration
 #define WRAPVAL 5000
 #define CLKDIV  25.0
-uint slice_num ;
+uint slice_num;
 
-// Global/static variables for PID and plotting
-static float pitch_deg = 0.0f;      // Filtered angle
-static float pitch_gyro_deg = 0.0f; // Integrated gyro angle
-static float target_angle = 0.0f;   // User-set target angle
-static float integral = 0.0f;       // Accumulated integral error
-static float prev_error = 0.0f;     // Previous error for derivative term
-static float motor_command = 0.0f;  // Stores PID output for plotting
-static float error = 0.0f;          // Stores error for plotting
-static float derivative = 0.0f;     // Stores derivative term for plotting
-static float gx_corrected;
+// ===================== Complementary Filter Constants =====================
+// Fixed-point constants
+static fix15 complementary_angle = int2fix15(0);  // Complementary filter output
+static fix15 accel_angle_fix15 = int2fix15(0);    // Accelerometer-based angle
+static fix15 gyro_angle_delta = int2fix15(0);     // Change in gyro angle
+
+// Fixed-point scaling factors
+static fix15 zeropt001 = float2fix15(0.001);      // 0.001 (dt)
+static fix15 zeropt999 = float2fix15(0.999);      // 0.999 (gyro weight)
+static fix15 oneeightyoverpi = float2fix15(180.0 / M_PI); // Conversion factor for degrees
+
+// ===================== PID Control Variables =====================
+static float pitch_deg = 0.0f;      // Filtered angle (for plotting & PID)
+static float target_angle = 0.0f;   // User-defined target angle
+static float integral = 0.0f;       // Integral term in PID
+static float prev_error = 0.0f;     // Previous error for derivative calculation
+static float motor_command = 0.0f;  // PID output (used for motor control)
+static float error = 0.0f;          // Current error
+static float derivative = 0.0f;     // Derivative term
 
 // PID Constants (TUNE THESE)
 static float Kp = 1.5;  
 static float Ki = 0.01; 
 static float Kd = 0.5;
 
-
-// Interrupt service routine
+// ===================== INTERRUPT HANDLER =====================
 void on_pwm_wrap() {
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
     mpu6050_read_raw(acceleration, gyro);
 
-    // Convert fix15 to float
-    float ax = fix2float15(acceleration[0]);
-    float ay = fix2float15(acceleration[1]);
-    float az = fix2float15(acceleration[2]);
-    float gx = fix2float15(gyro[0]);
+    // ===================== Convert Fix15 to Floats =====================
+    fix15 ax = acceleration[0];
+    fix15 ay = acceleration[1];
+    fix15 az = acceleration[2];
+    fix15 gx = gyro[0];
 
-    // Correct for gyro bias
-    //float gyro_bias_x = 0.5;  
-    //float gx_corrected = gx - gyro_bias_x;
-
-    // Calculate accelerometer-based pitch angle
-    float pitch_acc_deg = atan2f(ay, az) * (180.0f / M_PI);
-
-    // Integrate the gyro reading
-    float dt = 0.001;  
-    pitch_gyro_deg += gx * dt;
-
-    // Accelerometer angle (degrees - 15.16 fixed point) 
-    // Only ONE of the two lines below will be used, depending whether or not a small angle approximation is appropriate
-    float accel_angle;
-    float gyro_angle_delta;
-    float complementary_angle;
-    
+    // ===================== Compute Accelerometer-based Angle =====================
     // SMALL ANGLE APPROXIMATION
-    accel_angle = multfix15(divfix(acceleration[0], acceleration[1]), oneeightyoverpi) ;
-   // NO SMALL ANGLE APPROXIMATION
-    //accel_angle = multfix15(float2fix15(atan2(-filtered_ax, filtered_ay) + PI), oneeightyoverpi);
+    accel_angle_fix15 = multfix15(divfix(ax, ay), oneeightyoverpi);
 
-    // Gyro angle delta (measurement times timestep) (15.16 fixed point)
-    gyro_angle_delta = multfix15(gyro[2], zeropt001) ;
+    // NO SMALL ANGLE APPROXIMATION (Uncomment if needed)
+    // accel_angle_fix15 = multfix15(float2fix15(atan2(-fix2float15(ax), fix2float15(ay)) + M_PI), oneeightyoverpi);
 
-    // Complementary angle (degrees - 15.16 fixed point)
-    complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + multfix15(accel_angle, zeropt001);
+    // ===================== Compute Gyro Angle Change =====================
+    gyro_angle_delta = multfix15(gyro[2], zeropt001); 
 
-    // Compute PID terms
+    // ===================== Apply Complementary Filter =====================
+    complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + multfix15(accel_angle_fix15, zeropt001);
+
+    // Convert filtered complementary angle back to float
+    pitch_deg = fix2float15(complementary_angle);
+
+    // ===================== PID Controller =====================
     error = target_angle - pitch_deg;
-    integral += error * dt; 
-    derivative = (error - prev_error) / dt;
+    integral += error * 0.001; 
+    derivative = (error - prev_error) / 0.001;
     prev_error = error;
 
     // Compute PID output
@@ -147,9 +125,7 @@ void on_pwm_wrap() {
     PT_SEM_SIGNAL(pt, &vga_semaphore);
 }
 
-
-// Thread that draws to VGA display
-// Thread that draws to VGA display
+// ===================== VGA DISPLAY THREAD =====================
 static PT_THREAD (protothread_vga(struct pt *pt)) {
     PT_BEGIN(pt);
 
@@ -163,10 +139,10 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
     setTextColor(WHITE);
     
     // Draw the static graph grid
-    drawHLine(75, 230, 5, CYAN);  // Middle line
-    drawHLine(75, 155, 5, CYAN);  // Upper limit
-    drawHLine(75, 80, 5, CYAN);   // Lower limit
-    drawVLine(80, 80, 150, CYAN); // Vertical axis
+    drawHLine(75, 230, 5, CYAN);  
+    drawHLine(75, 155, 5, CYAN);  
+    drawHLine(75, 80, 5, CYAN);   
+    drawVLine(80, 80, 150, CYAN); 
 
     while (true) {
         PT_SEM_WAIT(pt, &vga_semaphore);
@@ -178,143 +154,50 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             // Erase previous column to keep graph clean
             drawVLine(xcoord, 0, 480, BLACK);
 
-            // **Plot actual angle from complementary filter (`pitch_deg`)**
+            // Plot actual angle from complementary filter
             drawPixel(xcoord, 230 - (int)(NewRange * ((pitch_deg - OldMin) / OldRange)), WHITE);
 
-            // **Plot target angle (`target_angle`)**
+            // Plot target angle
             drawPixel(xcoord, 230 - (int)(NewRange * ((target_angle - OldMin) / OldRange)), RED);
 
-            // Scroll horizontally for real-time effect
+            // Scroll horizontally
             if (xcoord < 609) {
                 xcoord += 1;
             } else {
                 xcoord = 81; 
             }
-
-            // **Clear old text by drawing black rectangles**
-            #define TEXT_BG_WIDTH  140
-            #define TEXT_BG_HEIGHT 10
-
-            fillRect(10, 10, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 10); setTextColor(WHITE);
-            sprintf(screentext, "P: %.2f", Kp * error);
-            writeString(screentext);
-
-            fillRect(10, 30, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 30); setTextColor(YELLOW);
-            sprintf(screentext, "I: %.2f", Ki * integral);
-            writeString(screentext);
-
-            fillRect(10, 50, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 50); setTextColor(MAGENTA);
-            sprintf(screentext, "D: %.2f", Kd * derivative);
-            writeString(screentext);
-
-            fillRect(10, 70, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 70); setTextColor(GREEN);
-            sprintf(screentext, "Motor Cmd: %.2f", motor_command);
-            writeString(screentext);
         }
     }
     PT_END(pt);
 }
 
-// User input thread. User can change draw speed
-static PT_THREAD (protothread_serial(struct pt *pt))
-{
-    PT_BEGIN(pt) ;
-    static char classifier ;
-    static int test_in ;
-    static float float_in ;
-    while(1) {
-        sprintf(pt_serial_out_buffer, "input a command: ");
-        serial_write ;
-        // spawn a thread to do the non-blocking serial read
-        serial_read ;
-        // convert input string to number
-        sscanf(pt_serial_in_buffer,"%c", &classifier) ;
-
-        // num_independents = test_in ;
-        if (classifier=='t') {
-            sprintf(pt_serial_out_buffer, "timestep: ");
-            serial_write ;
-            serial_read ;
-            // convert input string to number
-            sscanf(pt_serial_in_buffer,"%d", &test_in) ;
-            if (test_in > 0) {
-                threshold = test_in ;
-            }
-        }
-    }
-    PT_END(pt) ;
-}
-
-// Entry point for core 1
-void core1_entry() {
-    pt_add_thread(protothread_vga) ;
-    pt_schedule_start ;
-}
-
+// ===================== MAIN FUNCTION =====================
 int main() {
-
-    // Initialize stdio
     stdio_init_all();
+    initVGA();
 
-    // Initialize VGA
-    initVGA() ;
-
-    ////////////////////////////////////////////////////////////////////////
-    ///////////////////////// I2C CONFIGURATION ////////////////////////////
-    i2c_init(I2C_CHAN, I2C_BAUD_RATE) ;
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C) ;
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C) ;
-
-    // Pullup resistors on breakout board, don't need to turn on internals
-    // gpio_pull_up(SDA_PIN) ;
-    // gpio_pull_up(SCL_PIN) ;
-
-    // MPU6050 initialization
+    // I2C CONFIGURATION
+    i2c_init(I2C_CHAN, I2C_BAUD_RATE);
+    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
     mpu6050_reset();
     mpu6050_read_raw(acceleration, gyro);
 
-    ////////////////////////////////////////////////////////////////////////
-    ///////////////////////// PWM CONFIGURATION ////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
-    // Tell GPIO's 4,5 that they allocated to the PWM
+    // PWM CONFIGURATION
     gpio_set_function(5, GPIO_FUNC_PWM);
     gpio_set_function(4, GPIO_FUNC_PWM);
-
-    // Find out which PWM slice is connected to GPIO 5 (it's slice 2, same for 4)
     slice_num = pwm_gpio_to_slice_num(5);
-
-    // Mask our slice's IRQ output into the PWM block's single interrupt line,
-    // and register our interrupt handler
     pwm_clear_irq(slice_num);
     pwm_set_irq_enabled(slice_num, true);
     irq_set_exclusive_handler(PWM_IRQ_WRAP, on_pwm_wrap);
     irq_set_enabled(PWM_IRQ_WRAP, true);
-
-    // This section configures the period of the PWM signals
-    pwm_set_wrap(slice_num, WRAPVAL) ;
-    pwm_set_clkdiv(slice_num, CLKDIV) ;
-
-    // This sets duty cycle
-    pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, 0);
-
-    // Start the channel
+    pwm_set_wrap(slice_num, WRAPVAL);
+    pwm_set_clkdiv(slice_num, CLKDIV);
     pwm_set_mask_enabled((1u << slice_num));
 
-
-    ////////////////////////////////////////////////////////////////////////
-    ///////////////////////////// ROCK AND ROLL ////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
-    // start core 1 
+    // START THREADS
     multicore_reset_core1();
     multicore_launch_core1(core1_entry);
-
-    // start core 0
-    pt_add_thread(protothread_serial) ;
-    pt_schedule_start ;
-
+    pt_add_thread(protothread_vga);
+    pt_schedule_start;
 }
