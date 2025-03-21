@@ -142,10 +142,12 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
 
     setTextSize(1);
     setTextColor(WHITE);
-    drawHLine(75, 230, 5, CYAN);  
-    drawHLine(75, 155, 5, CYAN);  
-    drawHLine(75, 80, 5, CYAN);   
-    drawVLine(80, 80, 150, CYAN); 
+    
+    // Draw the static graph grid
+    drawHLine(75, 230, 5, CYAN);  // Middle line
+    drawHLine(75, 155, 5, CYAN);  // Upper limit
+    drawHLine(75, 80, 5, CYAN);   // Lower limit
+    drawVLine(80, 80, 150, CYAN); // Vertical axis
 
     while (true) {
         PT_SEM_WAIT(pt, &vga_semaphore);
@@ -157,19 +159,11 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             // Erase previous column
             drawVLine(xcoord, 0, 480, BLACK);
 
-            // **Plot complementary filter output (`pitch_deg`)**
+            // **Plot actual angle from complementary filter (`pitch_deg`)**
             drawPixel(xcoord, 230 - (int)(NewRange * ((pitch_deg - OldMin) / OldRange)), WHITE);
 
             // **Plot target angle (`target_angle`)**
             drawPixel(xcoord, 230 - (int)(NewRange * ((target_angle - OldMin) / OldRange)), RED);
-
-            // **Plot PID output (`motor_command`)**
-            drawPixel(xcoord, 430 - (int)(NewRange * ((motor_command - OldMin) / OldRange)), GREEN);
-
-            // **Plot Proportional, Integral, and Derivative terms**
-            drawPixel(xcoord, 230 - (int)(NewRange * ((Kp * error - OldMin) / OldRange)), BLUE);    
-            drawPixel(xcoord, 230 - (int)(NewRange * ((Ki * integral - OldMin) / OldRange)), YELLOW);  
-            drawPixel(xcoord, 230 - (int)(NewRange * ((Kd * derivative - OldMin) / OldRange)), MAGENTA);  
 
             // Scroll horizontally
             if (xcoord < 609) {
@@ -177,10 +171,28 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             } else {
                 xcoord = 81; 
             }
+
+            // **Display PID values as text**
+            setCursor(10, 10); setTextColor(WHITE);
+            sprintf(screentext, "P: %.2f", Kp * error);
+            writeString(screentext);
+
+            setCursor(10, 30); setTextColor(YELLOW);
+            sprintf(screentext, "I: %.2f", Ki * integral);
+            writeString(screentext);
+
+            setCursor(10, 50); setTextColor(MAGENTA);
+            sprintf(screentext, "D: %.2f", Kd * derivative);
+            writeString(screentext);
+
+            setCursor(10, 70); setTextColor(GREEN);
+            sprintf(screentext, "Motor Cmd: %.2f", motor_command);
+            writeString(screentext);
         }
     }
     PT_END(pt);
 }
+
 
 
 // User input thread. User can change draw speed
