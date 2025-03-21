@@ -65,52 +65,46 @@ static struct pt_sem vga_semaphore ;
 uint slice_num ;
 
 // Global/static variables for PID and plotting
-static float pitch_deg = 0.0f;      // Filtered angle
-static float pitch_gyro_deg = 0.0f; // Integrated gyro angle
-static float target_angle = 0.0f;   // User-set target angle
-static float integral = 0.0f;       // Accumulated integral error
-static float prev_error = 0.0f;     // Previous error for derivative term
-static float motor_command = 0.0f;  // Stores PID output for plotting
-static float error = 0.0f;          // Stores error for plotting
-static float derivative = 0.0f;     // Stores derivative term for plotting
-static float gx_corrected;
+static fix15 complementary_angle = int2fix15(0);  // Filtered angle in fixed-point
+static fix15 pitch_gyro_fix15 = int2fix15(0);     // Gyro-integrated angle
+static fix15 accel_angle_fix15 = int2fix15(0);    // Accelerometer-based angle
+static fix15 gyro_angle_delta = int2fix15(0);     // Gyro angle delta
+static fix15 zeropt001 = float2fix15(0.001);      // Fixed-point representation of 0.001
+static fix15 zeropt999 = float2fix15(0.999);      // Fixed-point representation of 0.999
+static fix15 oneeightyoverpi = float2fix15(180.0 / M_PI); // Scale factor for degrees
 
-// PID Constants (TUNE THESE)
-static float Kp = 1.5;  
-static float Ki = 0.01; 
-static float Kd = 0.5;
-
-
-// Interrupt service routine
 void on_pwm_wrap() {
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
     mpu6050_read_raw(acceleration, gyro);
 
-    // Convert fix15 to float
-    float ax = fix2float15(acceleration[0]);
-    float ay = fix2float15(acceleration[1]);
-    float az = fix2float15(acceleration[2]);
-    float gx = fix2float15(gyro[0]);
+    // Convert fix15 to float for calculations
+    fix15 ax = acceleration[0];
+    fix15 ay = acceleration[1];
+    fix15 az = acceleration[2];
+    fix15 gx = gyro[0];
 
-    // Correct for gyro bias
-    float gyro_bias_x = 0.5;  
-    float gx_corrected = gx - gyro_bias_x;
+    // Calculate accelerometer-based pitch angle (Fixed-Point)
+    // Choose either Small Angle Approximation or Full `atan2` Method
 
-    // Calculate accelerometer-based pitch angle
-    float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / M_PI);
+    // SMALL ANGLE APPROXIMATION
+    accel_angle_fix15 = multfix15(divfix(ax, ay), oneeightyoverpi);
 
-    // Integrate the gyro reading
-    float dt = 0.001;  
-    pitch_gyro_deg += gx_corrected * dt;
+    // NO SMALL ANGLE APPROXIMATION (Uncomment to use)
+    // accel_angle_fix15 = multfix15(float2fix15(atan2(-fix2float15(ax), fix2float15(ay)) + M_PI), oneeightyoverpi);
 
-    // Apply the complementary filter
-    float alpha = 0.8;
-    pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha) * pitch_acc_deg;
+    // Gyro angle delta (measurement times timestep)
+    gyro_angle_delta = multfix15(gyro[2], zeropt001); 
+
+    // Complementary filter (Fixed-Point)
+    complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + multfix15(accel_angle_fix15, zeropt001);
+
+    // Convert complementary angle back to float for PID control
+    pitch_deg = fix2float15(complementary_angle);
 
     // Compute PID terms
     error = target_angle - pitch_deg;
-    integral += error * dt; 
-    derivative = (error - prev_error) / dt;
+    integral += error * 0.001; // dt = 0.001
+    derivative = (error - prev_error) / 0.001;
     prev_error = error;
 
     // Compute PID output
