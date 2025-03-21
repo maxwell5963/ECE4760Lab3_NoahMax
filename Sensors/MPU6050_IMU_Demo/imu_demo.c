@@ -64,17 +64,21 @@ static struct pt_sem vga_semaphore ;
 #define CLKDIV  25.0
 uint slice_num ;
 
-// Global/static variables for PID control
+// Global/static variables for PID and plotting
 static float pitch_deg = 0.0f;      // Filtered angle
 static float pitch_gyro_deg = 0.0f; // Integrated gyro angle
 static float target_angle = 0.0f;   // User-set target angle
 static float integral = 0.0f;       // Accumulated integral error
 static float prev_error = 0.0f;     // Previous error for derivative term
+static float motor_command = 0.0f;  // Stores PID output for plotting
+static float error = 0.0f;          // Stores error for plotting
+static float derivative = 0.0f;     // Stores derivative term for plotting
 
 // PID Constants (TUNE THESE)
-static float Kp = 1.5;  // Adjust based on response speed
-static float Ki = 0.01; // Adjust to eliminate steady-state error
-static float Kd = 0.5;  // Adjust to prevent overshooting
+static float Kp = 1.5;  
+static float Ki = 0.01; 
+static float Kd = 0.5;
+
 
 // Interrupt service routine
 void on_pwm_wrap() {
@@ -143,91 +147,59 @@ void on_pwm_wrap() {
 }
 
 // Thread that draws to VGA display
-static PT_THREAD (protothread_vga(struct pt *pt))
-{
-    // Indicate start of thread
-    PT_BEGIN(pt) ;
+static PT_THREAD (protothread_vga(struct pt *pt)) {
+    PT_BEGIN(pt);
 
-    // We will start drawing at column 81
-    static int xcoord = 81 ;
-    
-    // Rescale the measurements for display
-    static float OldRange = 500. ; // (+/- 250)
-    static float NewRange = 150. ; // (looks nice on VGA)
-    static float OldMin = -250. ;
-    static float OldMax = 250. ;
+    static int xcoord = 81;  // Start drawing from column 81
+    static int throttle;
 
-    // Control rate of drawing
-    static int throttle ;
+    // Define scaling for VGA display
+    static float OldRange = 90.0;  // Assume +/- 90 degrees range
+    static float NewRange = 150.0; // Pixels (adjust for VGA)
+    static float OldMin = -45.0;   // Centered at 0 degrees
 
-    // Draw the static aspects of the display
-    setTextSize(1) ;
+    // Draw the static graph grid
+    setTextSize(1);
     setTextColor(WHITE);
-
-    // Draw bottom plot
-    drawHLine(75, 430, 5, CYAN) ;
-    drawHLine(75, 355, 5, CYAN) ;
-    drawHLine(75, 280, 5, CYAN) ;
-    drawVLine(80, 280, 150, CYAN) ;
-    sprintf(screentext, "0") ;
-    setCursor(50, 350) ;
-    writeString(screentext) ;
-    sprintf(screentext, "+2") ;
-    setCursor(50, 280) ;
-    writeString(screentext) ;
-    sprintf(screentext, "-2") ;
-    setCursor(50, 425) ;
-    writeString(screentext) ;
-
-    // Draw top plot
-    drawHLine(75, 230, 5, CYAN) ;
-    drawHLine(75, 155, 5, CYAN) ;
-    drawHLine(75, 80, 5, CYAN) ;
-    drawVLine(80, 80, 150, CYAN) ;
-    sprintf(screentext, "0") ;
-    setCursor(50, 150) ;
-    writeString(screentext) ;
-    sprintf(screentext, "+250") ;
-    setCursor(45, 75) ;
-    writeString(screentext) ;
-    sprintf(screentext, "-250") ;
-    setCursor(45, 225) ;
-    writeString(screentext) ;
+    drawHLine(75, 230, 5, CYAN);  // Middle line
+    drawHLine(75, 155, 5, CYAN);  // Upper limit
+    drawHLine(75, 80, 5, CYAN);   // Lower limit
+    drawVLine(80, 80, 150, CYAN); // Vertical axis
     
-
     while (true) {
-        // Wait on semaphore
+        // Wait on semaphore signal from IMU update
         PT_SEM_WAIT(pt, &vga_semaphore);
-        // Increment drawspeed controller
-        throttle += 1 ;
-        // If the controller has exceeded a threshold, draw
+        throttle += 1;
+
+        // Control drawing speed
         if (throttle >= threshold) { 
-            // Zero drawspeed controller
-            throttle = 0 ;
+            throttle = 0;  // Reset throttle controller
 
-            // Erase a column
-            drawVLine(xcoord, 0, 480, BLACK) ;
+            // Erase previous column to keep display clean
+            drawVLine(xcoord, 0, 480, BLACK);
 
-            // Draw bottom plot (multiply by 120 to scale from +/-2 to +/-250)
-            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[0])*120.0)-OldMin)/OldRange)), WHITE) ;
-            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[1])*120.0)-OldMin)/OldRange)), RED) ;
-            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[2])*120.0)-OldMin)/OldRange)), GREEN) ;
+            // **Plot complementary filter output (`pitch_deg`)**
+            drawPixel(xcoord, 230 - (int)(NewRange * ((pitch_deg - OldMin) / OldRange)), WHITE);
 
-            // Draw top plot
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[0]))-OldMin)/OldRange)), WHITE) ;
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[1]))-OldMin)/OldRange)), RED) ;
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[2]))-OldMin)/OldRange)), GREEN) ;
+            // **Plot target angle (`target_angle`)**
+            drawPixel(xcoord, 230 - (int)(NewRange * ((target_angle - OldMin) / OldRange)), RED);
 
-            // Update horizontal cursor
+            // **Plot PID output (`motor_command`)**
+            drawPixel(xcoord, 430 - (int)(NewRange * ((motor_command - OldMin) / OldRange)), GREEN);
+
+            // **Plot Proportional, Integral, and Derivative terms**
+            drawPixel(xcoord, 230 - (int)(NewRange * ((Kp * error - OldMin) / OldRange)), BLUE);  // P-term
+            drawPixel(xcoord, 230 - (int)(NewRange * ((Ki * integral - OldMin) / OldRange)), YELLOW);  // I-term
+            drawPixel(xcoord, 230 - (int)(NewRange * ((Kd * derivative - OldMin) / OldRange)), MAGENTA);  // D-term
+
+            // Move to next column for real-time scrolling effect
             if (xcoord < 609) {
-                xcoord += 1 ;
-            }
-            else {
-                xcoord = 81 ;
+                xcoord += 1;
+            } else {
+                xcoord = 81; // Reset to start
             }
         }
     }
-    // Indicate end of thread
     PT_END(pt);
 }
 
