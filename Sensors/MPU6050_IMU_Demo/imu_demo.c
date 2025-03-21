@@ -103,7 +103,7 @@ void on_pwm_wrap() {
     pitch_gyro_deg += gx_corrected * dt;
 
     // Apply the complementary filter
-    float alpha = 0.98;
+    float alpha = 0.8;
     pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha) * pitch_acc_deg;
 
     // Compute PID terms
@@ -116,18 +116,23 @@ void on_pwm_wrap() {
     motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
 
     // Convert PID output to PWM duty cycle
-    uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500); 
+    uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500);
+
+    // Apply low-pass filter to motor signal (64-sample smoothing)
+    static uint16_t motor_disp = 0;
+    motor_disp = motor_disp + ((pwm_value - motor_disp) >> 6);
 
     // Limit motor power
-    if (pwm_value > 5000) pwm_value = 5000;
-    if (pwm_value < 0) pwm_value = 0;
+    if (motor_disp > 5000) motor_disp = 5000;
+    if (motor_disp < 0) motor_disp = 0;
 
-    // Set motor PWM duty cycle
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, pwm_value);
+    // Set motor PWM duty cycle using filtered value
+    pwm_set_chan_level(slice_num, PWM_CHAN_A, motor_disp);
 
-    // Signal VGA to update
+    // Signal VGA update
     PT_SEM_SIGNAL(pt, &vga_semaphore);
 }
+
 
 
 // Thread that draws to VGA display
