@@ -41,6 +41,7 @@
 #include "mpu6050.h"
 #include "pt_cornell_rp2040_v1_3.h"
 
+
 // Arrays in which raw measurements will be stored
 fix15 acceleration[3], gyro[3];
 
@@ -62,6 +63,18 @@ static struct pt_sem vga_semaphore ;
 #define WRAPVAL 5000
 #define CLKDIV  25.0
 uint slice_num ;
+
+// Global/static variables for PID control
+static float pitch_deg = 0.0f;      // Filtered angle
+static float pitch_gyro_deg = 0.0f; // Integrated gyro angle
+static float target_angle = 0.0f;   // User-set target angle
+static float integral = 0.0f;       // Accumulated integral error
+static float prev_error = 0.0f;     // Previous error for derivative term
+
+// PID Constants (TUNE THESE)
+static float Kp = 1.5;  // Adjust based on response speed
+static float Ki = 0.01; // Adjust to eliminate steady-state error
+static float Kd = 0.5;  // Adjust to prevent overshooting
 
 // Interrupt service routine
 void on_pwm_wrap() {
@@ -89,7 +102,7 @@ void on_pwm_wrap() {
     //float gx_corrected = gx - gyro_bias_x;
 
     // Calculating pitch angle
-    float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / M_PI);
+    float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / 3.1415);
 
     // Integrating gyro rate to estimate pitch change over time
     float dt = 0.001;  // Sampling time (1ms spec from lab demo)
@@ -105,6 +118,7 @@ void on_pwm_wrap() {
     pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha) * pitch_acc_deg;
 
     // 4) PID control
+
     float error = target_angle - pitch_deg;
     integral += error * dt; // Integral term
     float derivative = (error - prev_error) / dt;
