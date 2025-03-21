@@ -82,100 +82,79 @@ static float Kd = 0.5;
 
 // Interrupt service routine
 void on_pwm_wrap() {
-
-    // Clear the interrupt flag that brought us here
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
-
-    // Read the IMU
-    // NOTE! This is in 15.16 fixed point. Accel in g's, gyro in deg/s
-    // If you want these values in floating point, call fix2float15() on
-    // the raw measurements.
     mpu6050_read_raw(acceleration, gyro);
 
-//-----------------------------------------------------------------------------------
-// OUR CODE IS BELOW THIS
-//-----------------------------------------------------------------------------------
-    // Convert fix15 to standard floats for easier calculation
+    // Convert fix15 to float
     float ax = fix2float15(acceleration[0]);
     float ay = fix2float15(acceleration[1]);
     float az = fix2float15(acceleration[2]);
-    float gx = fix2float15(gyro[0]); 
+    float gx = fix2float15(gyro[0]);
 
-    //ATTEMPT AT CORRECTING BIAS, NEED TO PLAY AROUND WITH IT 
+    // Correct for gyro bias
     float gyro_bias_x = 0.5;  
     float gx_corrected = gx - gyro_bias_x;
 
-    // Calculating pitch angle
-    float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / 3.1415);
+    // Calculate accelerometer-based pitch angle
+    float pitch_acc_deg = atan2f(ay, sqrtf(ax * ax + az * az)) * (180.0f / M_PI);
 
-    // Integrating gyro rate to estimate pitch change over time
-    float dt = 0.001;  // Sampling time (1ms spec from lab demo)
-    //pitch_gyro_deg += gx * dt;  // Integrate angular velocity
+    // Integrate the gyro reading
+    float dt = 0.001;  
+    pitch_gyro_deg += gx_corrected * dt;
 
-    //-------------------------------------------------------------------
-    //Still gotta get this straightened out
-    pitch_gyro_deg += gx_corrected * dt;  // With Bias Accounted For
-
-    // Complementary filter to fuse accelerometer and gyro estimates
-    //Low pass on the accelerometer, high-pass on gyro readings
+    // Apply the complementary filter
     float alpha = 0.98;
     pitch_deg = alpha * pitch_gyro_deg + (1.0f - alpha) * pitch_acc_deg;
 
-    // 4) PID control
-
-    float error = target_angle - pitch_deg;
-    integral += error * dt; // Integral term
-    float derivative = (error - prev_error) / dt;
+    // Compute PID terms
+    error = target_angle - pitch_deg;
+    integral += error * dt; 
+    derivative = (error - prev_error) / dt;
     prev_error = error;
 
     // Compute PID output
-    float motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
+    motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
 
     // Convert PID output to PWM duty cycle
-    uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500); // Scale appropriately
+    uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500); 
 
-    // Limit motor power to safe values
+    // Limit motor power
     if (pwm_value > 5000) pwm_value = 5000;
     if (pwm_value < 0) pwm_value = 0;
 
     // Set motor PWM duty cycle
     pwm_set_chan_level(slice_num, PWM_CHAN_A, pwm_value);
 
-    // Signal VGA to draw
+    // Signal VGA to update
     PT_SEM_SIGNAL(pt, &vga_semaphore);
-
 }
+
 
 // Thread that draws to VGA display
 static PT_THREAD (protothread_vga(struct pt *pt)) {
     PT_BEGIN(pt);
 
-    static int xcoord = 81;  // Start drawing from column 81
+    static int xcoord = 81;  
     static int throttle;
+    static float OldRange = 90.0;  
+    static float NewRange = 150.0; 
+    static float OldMin = -45.0;   
 
-    // Define scaling for VGA display
-    static float OldRange = 90.0;  // Assume +/- 90 degrees range
-    static float NewRange = 150.0; // Pixels (adjust for VGA)
-    static float OldMin = -45.0;   // Centered at 0 degrees
-
-    // Draw the static graph grid
     setTextSize(1);
     setTextColor(WHITE);
-    drawHLine(75, 230, 5, CYAN);  // Middle line
-    drawHLine(75, 155, 5, CYAN);  // Upper limit
-    drawHLine(75, 80, 5, CYAN);   // Lower limit
-    drawVLine(80, 80, 150, CYAN); // Vertical axis
-    
+    drawHLine(75, 230, 5, CYAN);  
+    drawHLine(75, 155, 5, CYAN);  
+    drawHLine(75, 80, 5, CYAN);   
+    drawVLine(80, 80, 150, CYAN); 
+
     while (true) {
-        // Wait on semaphore signal from IMU update
         PT_SEM_WAIT(pt, &vga_semaphore);
         throttle += 1;
 
-        // Control drawing speed
         if (throttle >= threshold) { 
-            throttle = 0;  // Reset throttle controller
+            throttle = 0;  
 
-            // Erase previous column to keep display clean
+            // Erase previous column
             drawVLine(xcoord, 0, 480, BLACK);
 
             // **Plot complementary filter output (`pitch_deg`)**
@@ -188,20 +167,21 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             drawPixel(xcoord, 430 - (int)(NewRange * ((motor_command - OldMin) / OldRange)), GREEN);
 
             // **Plot Proportional, Integral, and Derivative terms**
-            drawPixel(xcoord, 230 - (int)(NewRange * ((Kp * error - OldMin) / OldRange)), BLUE);  // P-term
-            drawPixel(xcoord, 230 - (int)(NewRange * ((Ki * integral - OldMin) / OldRange)), YELLOW);  // I-term
-            drawPixel(xcoord, 230 - (int)(NewRange * ((Kd * derivative - OldMin) / OldRange)), MAGENTA);  // D-term
+            drawPixel(xcoord, 230 - (int)(NewRange * ((Kp * error - OldMin) / OldRange)), BLUE);    
+            drawPixel(xcoord, 230 - (int)(NewRange * ((Ki * integral - OldMin) / OldRange)), YELLOW);  
+            drawPixel(xcoord, 230 - (int)(NewRange * ((Kd * derivative - OldMin) / OldRange)), MAGENTA);  
 
-            // Move to next column for real-time scrolling effect
+            // Scroll horizontally
             if (xcoord < 609) {
                 xcoord += 1;
             } else {
-                xcoord = 81; // Reset to start
+                xcoord = 81; 
             }
         }
     }
     PT_END(pt);
 }
+
 
 // User input thread. User can change draw speed
 static PT_THREAD (protothread_serial(struct pt *pt))
