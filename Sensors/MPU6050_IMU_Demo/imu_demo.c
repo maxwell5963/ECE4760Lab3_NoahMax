@@ -66,59 +66,63 @@ uint slice_num ;
 
 // Global/static variables for PID and plotting
 static float pitch_deg = 0.0f;      // Filtered angle
-static float pitch_gyro_deg = 0.0f; // Integrated gyro angle
 static float target_angle = 0.0f;   // User-set target angle
 static float integral = 0.0f;       // Accumulated integral error
 static float prev_error = 0.0f;     // Previous error for derivative term
 static float motor_command = 0.0f;  // Stores PID output for plotting
 static float error = 0.0f;          // Stores error for plotting
 static float derivative = 0.0f;     // Stores derivative term for plotting
-static float gx_corrected;
+static uint16_t motor_disp = 0;     // Filtered motor command for display
+
+// Fixed-point complementary angle (15.16 format)
+static int complementary_angle = 0;
 
 // PID Constants (TUNE THESE)
 static float Kp = 1.5;  
 static float Ki = 0.01; 
 static float Kd = 0.5;
 
+// Gyro bias correction
+static float gyro_bias_x = 0.5f;  // Adjust this value based on calibration
+
+// Complementary filter weights
+// Using 0.001 for accelerometer and 0.999 for gyro as recommended
+#define ACCEL_WEIGHT 0.001f
+#define GYRO_WEIGHT 0.999f
 
 // Interrupt service routine
 void on_pwm_wrap() {
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
     mpu6050_read_raw(acceleration, gyro);
 
-    // Convert fix15 to float
+    // Convert fix15 to float for calculations
     float ax = fix2float15(acceleration[0]);
     float ay = fix2float15(acceleration[1]);
     float az = fix2float15(acceleration[2]);
+    
+    // Use X-axis consistently for gyro (adjust if your mounting orientation differs)
     float gx = fix2float15(gyro[0]);
+    
+    // Apply gyro bias correction
+    float gx_corrected = gx - gyro_bias_x;
 
-    // Correct for gyro bias
-    //float gyro_bias_x = 0.5;  
-    //float gx_corrected = gx - gyro_bias_x;
+    // Time step for integration
+    float dt = 0.001f;  // 1ms
 
-    // Calculate accelerometer-based pitch angle
-    float pitch_acc_deg = atan2f(ay, az) * (180.0f / 3.1415);
-
-    // Integrate the gyro reading
-    float dt = 0.001;  
-    pitch_gyro_deg += gx * dt;
-
-    // Accelerometer angle (degrees - 15.16 fixed point) 
-    // Only ONE of the two lines below will be used, depending whether or not a small angle approximation is appropriate
-    float accel_angle;
-    float gyro_angle_delta;
-    float complementary_angle;
-
-    // SMALL ANGLE APPROXIMATION
-    accel_angle = multfix15(divfix(acceleration[0], acceleration[1]), oneeightyoverpi) ;
-   // NO SMALL ANGLE APPROXIMATION
-    //accel_angle = multfix15(float2fix15(atan2(-filtered_ax, filtered_ay) + PI), oneeightyoverpi);
-
-    // Gyro angle delta (measurement times timestep) (15.16 fixed point)
-    gyro_angle_delta = multfix15(gyro[2], zeropt001) ;
-
-    // Complementary angle (degrees - 15.16 fixed point)
-    complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + multfix15(accel_angle, zeropt001);
+    // Calculate accelerometer angle without small angle approximation
+    // Using the fixed-point calculations as per the tutorial
+    int accel_angle = multfix15(float2fix15(atan2(-ay, az) + 3.1415f), oneeightyoverpi);
+    
+    // Calculate gyro angle delta (measurement times timestep)
+    int gyro_angle_delta = multfix15(gyro[0], zeropt001);
+    
+    // Compute complementary filter - fixed point method
+    // Alpha = 0.999 for gyro (high-pass) and (1-alpha) = 0.001 for accelerometer (low-pass)
+    complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + 
+                          multfix15(accel_angle, zeropt001);
+    
+    // Convert the fixed-point complementary angle to float for the PID controller
+    pitch_deg = fix2float15(complementary_angle);
 
     // Compute PID terms
     error = target_angle - pitch_deg;
@@ -132,9 +136,8 @@ void on_pwm_wrap() {
     // Convert PID output to PWM duty cycle
     uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500);
 
-    // Apply low-pass filter to motor signal (64-sample smoothing)
-    static uint16_t motor_disp = 0;
-    motor_disp = motor_disp + ((pwm_value - motor_disp) >> 6);
+    // Apply low-pass filter to motor signal (16-sample smoothing - time constant as recommended)
+    motor_disp = motor_disp + ((pwm_value - motor_disp) >> 4); // Using 4 for shift (2^4 = 16)
 
     // Limit motor power
     if (motor_disp > 5000) motor_disp = 5000;
@@ -149,24 +152,41 @@ void on_pwm_wrap() {
 
 
 // Thread that draws to VGA display
-// Thread that draws to VGA display
 static PT_THREAD (protothread_vga(struct pt *pt)) {
     PT_BEGIN(pt);
 
     static int xcoord = 81;  
     static int throttle;
-    static float OldRange = 90.0;  
-    static float NewRange = 180.0; 
-    static float OldMin = -90.0;   
+    // Range for angle display from 0 to 180 degrees
+    static float OldRange = 180.0;  
+    static float NewRange = 150.0; // Display height in pixels
+    static float OldMin = 0.0;     // Starting at 0 degrees
 
     setTextSize(1);
     setTextColor(WHITE);
     
     // Draw the static graph grid
-    drawHLine(75, 230, 5, CYAN);  // Middle line
-    drawHLine(75, 155, 5, CYAN);  // Upper limit
-    drawHLine(75, 80, 5, CYAN);   // Lower limit
+    drawHLine(75, 230, 5, CYAN);  // Bottom line (0 degrees)
+    drawHLine(75, 155, 5, CYAN);  // Middle line (90 degrees)
+    drawHLine(75, 80, 5, CYAN);   // Top line (180 degrees)
     drawVLine(80, 80, 150, CYAN); // Vertical axis
+    
+    // Add labels for the angle axis
+    setCursor(50, 80); 
+    writeString("180");
+    setCursor(50, 155); 
+    writeString("90");
+    setCursor(50, 230); 
+    writeString("0");
+    
+    // Add a second vertical axis for motor command
+    drawVLine(610, 80, 150, GREEN);
+    setCursor(615, 80);
+    writeString("5000");
+    setCursor(615, 155);
+    writeString("2500");
+    setCursor(615, 230);
+    writeString("0");
 
     while (true) {
         PT_SEM_WAIT(pt, &vga_semaphore);
@@ -178,11 +198,21 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             // Erase previous column to keep graph clean
             drawVLine(xcoord, 0, 480, BLACK);
 
-            // **Plot actual angle from complementary filter (`pitch_deg`)**
-            drawPixel(xcoord, 230 - (int)(NewRange * ((pitch_deg - OldMin) / OldRange)), WHITE);
+            // Make sure pitch_deg is within 0-180 range for display
+            float display_angle = pitch_deg;
+            if (display_angle < 0) display_angle = 0;
+            if (display_angle > 180) display_angle = 180;
+            
+            // Plot actual angle from complementary filter (pitch_deg)
+            drawPixel(xcoord, 230 - (int)(NewRange * ((display_angle - OldMin) / OldRange)), WHITE);
 
-            // **Plot target angle (`target_angle`)**
+            // Plot target angle (target_angle)
             drawPixel(xcoord, 230 - (int)(NewRange * ((target_angle - OldMin) / OldRange)), RED);
+            
+            // Plot motor command (scaled to fit the display)
+            // motor_disp range is 0-5000, map to 80-230 pixel range
+            int motor_y = 230 - (int)((motor_disp / 5000.0) * 150.0);
+            drawPixel(xcoord, motor_y, GREEN);
 
             // Scroll horizontally for real-time effect
             if (xcoord < 609) {
@@ -191,7 +221,7 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
                 xcoord = 81; 
             }
 
-            // **Clear old text by drawing black rectangles**
+            // Clear old text by drawing black rectangles
             #define TEXT_BG_WIDTH  140
             #define TEXT_BG_HEIGHT 10
 
@@ -210,9 +240,19 @@ static PT_THREAD (protothread_vga(struct pt *pt)) {
             sprintf(screentext, "D: %.2f", Kd * derivative);
             writeString(screentext);
 
-            //fillRect(10, 70, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            //setCursor(10, 70); setTextColor(GREEN);
-            //sprintf(screentext, "Motor Cmd: %.2f", motor_command);
+            fillRect(10, 70, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
+            setCursor(10, 70); setTextColor(GREEN);
+            sprintf(screentext, "Motor Cmd: %.2f", motor_command);
+            writeString(screentext);
+            
+            fillRect(10, 90, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
+            setCursor(10, 90); setTextColor(WHITE);
+            sprintf(screentext, "Angle: %.2f", pitch_deg);
+            writeString(screentext);
+            
+            fillRect(10, 110, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
+            setCursor(10, 110); setTextColor(GREEN);
+            sprintf(screentext, "Filtered PWM: %d", motor_disp);
             writeString(screentext);
         }
     }
