@@ -73,15 +73,17 @@ fix15 error = 0;                // Error term for PID
 fix15 derivative = 0;           // Derivative term for PID
 fix15 pid_output = 0;           // Raw PID controller output
 static uint16_t motor_disp = 0;        // Filtered motor command for display
+fix15 gyro_angle_delta = 0;
+fix15 accel_angle = 0;
 
 
 // Fixed-point complementary angle (15.16 format)
 //static int complementary_angle = 0;
 
 // PID Constants (TUNE THESE)
-static float Kp = 1.5;  
-static float Ki = 0.01; 
-static float Kd = 0.5;
+static float kP = 1.5;  
+static float kI = 0.01; 
+static float kD = 0.5;
 
 // Gyro bias correction
 static float gyro_bias_x = 0.5f;  // Adjust this value based on calibration
@@ -111,7 +113,7 @@ void on_pwm_wrap() {
     int accel_angle = multfix15(float2fix15(atan2(-ay, az) + 3.1415f), oneeightyoverpi);
     
     // Calculate gyro angle delta (measurement times timestep)
-    int gyro_angle_delta = -multfix15(gyro[0], zeropt001);
+    gyro_angle_delta = -multfix15(gyro[0], zeropt001);
     
     // Compute complementary filter - fixed point method
     // Alpha = 0.999 for gyro (high-pass) and (1-alpha) = 0.001 for accelerometer (low-pass)
@@ -121,18 +123,17 @@ void on_pwm_wrap() {
     // Convert the fixed-point complementary angle to float for the PID controller
     //pitch_deg = fix2float15(complementary_angle);
 
-    const fix15 error = target_angle - complementary_angle;
-    const fix15 derivative = (error - prev_error) * 1000;
-    prev_error = error;
+    //const fix15 error = target_angle - complementary_angle;
+   // const fix15 derivative = (error - prev_error) * 1000;
+    //prev_error = error;
 
     // Compute PID terms
-    error = target_angle - pitch_deg;
-    integral += error * dt; 
-    derivative = (error - prev_error) / dt;
+    fix15 error = target_angle - complementary_angle;
+    fix15 derivative = (error - prev_error) * 1000;
     prev_error = error;
 
     // Compute PID output
-    float motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
+    float motor_command = (kP * error) + (kI * integral) + (kD * derivative);
 
     // Convert PID output to PWM duty cycle
     uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500);
@@ -153,110 +154,108 @@ void on_pwm_wrap() {
 
 
 // Thread that draws to VGA display
-static PT_THREAD (protothread_vga(struct pt *pt)) {
-    PT_BEGIN(pt);
+// Thread that draws to VGA display
+static PT_THREAD (protothread_vga(struct pt *pt))
+{
+    // Indicate start of thread
+    PT_BEGIN(pt) ;
 
-    static int xcoord = 81;  
-    static int throttle;
-    // Range for angle display from 0 to 180 degrees
-    static float OldRange = 180.0;  
-    static float NewRange = 150.0; // Display height in pixels
-    static float OldMin = 0.0;     // Starting at 0 degrees
+    // We will start drawing at column 81
+    static int xcoord = 81 ;
+    
+    // Rescale the measurements for display
+    static float OldRange = 500. ; // (+/- 250)
+    static float NewRange = 150. ; // (looks nice on VGA)
+    static float OldMin = -250. ;
+    static float OldMax = 250. ;
 
-    setTextSize(1);
+    // Control rate of drawing
+    static int throttle ;
+
+    // Draw the static aspects of the display
+    setTextSize(1) ;
     setTextColor(WHITE);
+
+    // Draw bottom plot
+    drawHLine(75, 430, 5, CYAN) ;
+    drawHLine(75, 355, 5, CYAN) ;
+    drawHLine(75, 280, 5, CYAN) ;
+    drawVLine(80, 280, 150, CYAN) ;
+    sprintf(screentext, "0") ;
+    setCursor(50, 350) ;
+    writeString(screentext) ;
+    sprintf(screentext, "+2") ;
+    setCursor(50, 280) ;
+    writeString(screentext) ;
+    sprintf(screentext, "-2") ;
+    setCursor(50, 425) ;
+    writeString(screentext) ;
+
+    // Draw top plot
+    drawHLine(75, 230, 5, CYAN) ;
+    drawHLine(75, 155, 5, CYAN) ;
+    drawHLine(75, 80, 5, CYAN) ;
+    drawVLine(80, 80, 150, CYAN) ;
+    sprintf(screentext, "0") ;
+    setCursor(50, 150) ;
+    writeString(screentext) ;
+    sprintf(screentext, "+250") ;
+    setCursor(45, 75) ;
+    writeString(screentext) ;
+    sprintf(screentext, "-250") ;
+    setCursor(45, 225) ;
+    writeString(screentext) ;
     
-    // Draw the static graph grid
-    drawHLine(75, 230, 5, CYAN);  // Bottom line (0 degrees)
-    drawHLine(75, 155, 5, CYAN);  // Middle line (90 degrees)
-    drawHLine(75, 80, 5, CYAN);   // Top line (180 degrees)
-    drawVLine(80, 80, 150, CYAN); // Vertical axis
-    
-    // Add labels for the angle axis
-    setCursor(50, 80); 
-    writeString("180");
-    setCursor(50, 155); 
-    writeString("90");
-    setCursor(50, 230); 
-    writeString("0");
-    
-    // Add a second vertical axis for motor command
-    drawVLine(610, 80, 150, GREEN);
-    setCursor(615, 80);
-    writeString("5000");
-    setCursor(615, 155);
-    writeString("2500");
-    setCursor(615, 230);
-    writeString("0");
 
     while (true) {
+        // Wait on semaphore
         PT_SEM_WAIT(pt, &vga_semaphore);
-        throttle += 1;
-
+        // Increment drawspeed controller
+        throttle += 1 ;
+        // If the controller has exceeded a threshold, draw
         if (throttle >= threshold) { 
-            throttle = 0;  
+            // Zero drawspeed controller
+            throttle = 0 ;
 
-            // Erase previous column to keep graph clean
-            drawVLine(xcoord, 0, 480, BLACK);
+            // Erase a column
+            drawVLine(xcoord, 0, 480, BLACK) ;
 
-            // Make sure pitch_deg is within 0-180 range for display
-            float display_angle = pitch_deg;
-            if (display_angle < 0) display_angle = 0;
-            if (display_angle > 180) display_angle = 180;
+            setTextColor2(WHITE, BLACK) ;
+            char pid_text[256] ;
+            sprintf(pid_text, "kP: %d | kI: %d | kD: %d        ", 
+                fix2int15(float2fix15(kP)), 
+                fix2int15(float2fix15(kI)), 
+                fix2int15(float2fix15(kD)));           
+            setTextSize(2);
+            setCursor(4, 4);
+            writeStringBig(pid_text) ;
             
-            // Plot actual angle from complementary filter (pitch_deg)
-            drawPixel(xcoord, 230 - (int)(NewRange * ((display_angle - OldMin) / OldRange)), WHITE);
+            // Draw bottom plot (multiply by 120 to scale from +/-2 to +/-250)
+            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[0])*120.0)-OldMin)/OldRange)), WHITE) ;
+            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[1])*120.0)-OldMin)/OldRange)), RED) ;
+            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[2])*120.0)-OldMin)/OldRange)), GREEN) ;
 
-            // Plot target angle (target_angle)
-            drawPixel(xcoord, 230 - (int)(NewRange * ((target_angle - OldMin) / OldRange)), RED);
+            // Draw top plot
+            // drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[0]))-OldMin)/OldRange)), WHITE) ;
+            // drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[1]))-OldMin)/OldRange)), RED) ;
+            // drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[2]))-OldMin)/OldRange)), GREEN) ;
+
             
-            // Plot motor command (scaled to fit the display)
-            // motor_disp range is 0-5000, map to 80-230 pixel range
-            int motor_y = 230 - (int)((motor_disp / 5000.0) * 150.0);
-            drawPixel(xcoord, motor_y, GREEN);
+            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(target_angle))-OldMin)/OldRange)), WHITE) ;
+            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(complementary_angle))-OldMin)/OldRange)), RED) ;
+            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(accel_angle))-OldMin)/OldRange)), GREEN) ;
+            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro_angle_delta))-OldMin)/OldRange)), BLUE) ;
 
-            // Scroll horizontally for real-time effect
+            // Update horizontal cursor
             if (xcoord < 609) {
-                xcoord += 1;
-            } else {
-                xcoord = 81; 
+                xcoord += 1 ;
             }
-
-            // Clear old text by drawing black rectangles
-            #define TEXT_BG_WIDTH  140
-            #define TEXT_BG_HEIGHT 10
-
-            fillRect(10, 10, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 10); setTextColor(WHITE);
-            sprintf(screentext, "P: %.2f", Kp * error);
-            writeString(screentext);
-
-            fillRect(10, 30, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 30); setTextColor(YELLOW);
-            sprintf(screentext, "I: %.2f", Ki * integral);
-            writeString(screentext);
-
-            fillRect(10, 50, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 50); setTextColor(MAGENTA);
-            sprintf(screentext, "D: %.2f", Kd * derivative);
-            writeString(screentext);
-
-            fillRect(10, 70, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 70); setTextColor(GREEN);
-            sprintf(screentext, "Motor Cmd: %.2f", motor_command);
-            writeString(screentext);
-            
-            fillRect(10, 90, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 90); setTextColor(WHITE);
-            sprintf(screentext, "Angle: %.2f", pitch_deg);
-            writeString(screentext);
-            
-            fillRect(10, 110, TEXT_BG_WIDTH, TEXT_BG_HEIGHT, RED);
-            setCursor(10, 110); setTextColor(GREEN);
-            sprintf(screentext, "Filtered PWM: %d", motor_disp);
-            writeString(screentext);
+            else {
+                xcoord = 81 ;
+            }
         }
     }
+    // Indicate end of thread
     PT_END(pt);
 }
 
