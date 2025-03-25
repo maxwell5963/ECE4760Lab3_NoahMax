@@ -43,7 +43,7 @@
 
 
 // Arrays in which raw measurements will be stored
-fix15 acceleration[3], gyro[3];
+fix15 accel_raw[3], acceleration[3], gyro[3];
 
 // character array
 char screentext[40];
@@ -64,18 +64,19 @@ static struct pt_sem vga_semaphore ;
 #define CLKDIV  25.0
 uint slice_num ;
 
-// Global/static variables for PID and plotting
-static float pitch_deg = 0.0f;      // Filtered angle
-static float target_angle = 0.0f;   // User-set target angle
-static float integral = 0.0f;       // Accumulated integral error
-static float prev_error = 0.0f;     // Previous error for derivative term
-static float motor_command = 0.0f;  // Stores PID output for plotting
-static float error = 0.0f;          // Stores error for plotting
-static float derivative = 0.0f;     // Stores derivative term for plotting
-static uint16_t motor_disp = 0;     // Filtered motor command for display
+// Global/static variables for PID and plotting - all in fixed point (15.16 format)
+fix15 complementary_angle = 0;  // Current angle in fixed point
+fix15 target_angle = int2fix15(90);   // User-set target angle (default 90 degrees)
+fix15 integral = 0;             // Accumulated integral error
+fix15 prev_error = 0;           // Previous error for derivative term
+fix15 error = 0;                // Error term for PID
+fix15 derivative = 0;           // Derivative term for PID
+fix15 pid_output = 0;           // Raw PID controller output
+static uint16_t motor_disp = 0;        // Filtered motor command for display
+
 
 // Fixed-point complementary angle (15.16 format)
-static int complementary_angle = 0;
+//static int complementary_angle = 0;
 
 // PID Constants (TUNE THESE)
 static float Kp = 1.5;  
@@ -95,26 +96,22 @@ void on_pwm_wrap() {
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
     mpu6050_read_raw(acceleration, gyro);
 
+    //This serves as our low-pass filter for raw readings
+    acceleration[0] += (accel_raw[0] - acceleration[0]) >> 4;
+    acceleration[1] += (accel_raw[1] - acceleration[1]) >> 4;
+    acceleration[2] += (accel_raw[2] - acceleration[2]) >> 4;
+
     // Convert fix15 to float for calculations
     float ax = fix2float15(acceleration[0]);
     float ay = fix2float15(acceleration[1]);
     float az = fix2float15(acceleration[2]);
     
-    // Use X-axis consistently for gyro (adjust if your mounting orientation differs)
-    float gx = fix2float15(gyro[0]);
-    
-    // Apply gyro bias correction
-    float gx_corrected = gx - gyro_bias_x;
-
-    // Time step for integration
-    float dt = 0.001f;  // 1ms
-
     // Calculate accelerometer angle without small angle approximation
     // Using the fixed-point calculations as per the tutorial
     int accel_angle = multfix15(float2fix15(atan2(-ay, az) + 3.1415f), oneeightyoverpi);
     
     // Calculate gyro angle delta (measurement times timestep)
-    int gyro_angle_delta = multfix15(gyro[0], zeropt001);
+    int gyro_angle_delta = -multfix15(gyro[0], zeropt001);
     
     // Compute complementary filter - fixed point method
     // Alpha = 0.999 for gyro (high-pass) and (1-alpha) = 0.001 for accelerometer (low-pass)
@@ -122,7 +119,11 @@ void on_pwm_wrap() {
                           multfix15(accel_angle, zeropt001);
     
     // Convert the fixed-point complementary angle to float for the PID controller
-    pitch_deg = fix2float15(complementary_angle);
+    //pitch_deg = fix2float15(complementary_angle);
+
+    const fix15 error = target_angle - complementary_angle;
+    const fix15 derivative = (error - prev_error) * 1000;
+    prev_error = error;
 
     // Compute PID terms
     error = target_angle - pitch_deg;
@@ -131,13 +132,13 @@ void on_pwm_wrap() {
     prev_error = error;
 
     // Compute PID output
-    motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
+    float motor_command = (Kp * error) + (Ki * integral) + (Kd * derivative);
 
     // Convert PID output to PWM duty cycle
     uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500);
 
     // Apply low-pass filter to motor signal (16-sample smoothing - time constant as recommended)
-    motor_disp = motor_disp + ((pwm_value - motor_disp) >> 4); // Using 4 for shift (2^4 = 16)
+    //motor_disp = motor_disp + ((pwm_value - motor_disp) >> 4); // Using 4 for shift (2^4 = 16)
 
     // Limit motor power
     if (motor_disp > 5000) motor_disp = 5000;
