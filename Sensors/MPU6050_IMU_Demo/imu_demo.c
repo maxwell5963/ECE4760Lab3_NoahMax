@@ -94,11 +94,15 @@ static float gyro_bias_x = 0.5f;  // Adjust this value based on calibration
 #define GYRO_WEIGHT 0.999f
 
 // Interrupt service routine
+// Interrupt service routine
 void on_pwm_wrap() {
+    // Clear the interrupt flag
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
+    
+    // Read sensor data
     mpu6050_read_raw(acceleration, gyro);
 
-    //This serves as our low-pass filter for raw readings
+    // Low-pass filter for raw readings
     acceleration[0] += (accel_raw[0] - acceleration[0]) >> 4;
     acceleration[1] += (accel_raw[1] - acceleration[1]) >> 4;
     acceleration[2] += (accel_raw[2] - acceleration[2]) >> 4;
@@ -109,8 +113,7 @@ void on_pwm_wrap() {
     float az = fix2float15(acceleration[2]);
     
     // Calculate accelerometer angle without small angle approximation
-    // Using the fixed-point calculations as per the tutorial
-    int accel_angle = multfix15(float2fix15(atan2(-ay, az) + 3.1415f), oneeightyoverpi);
+    accel_angle = multfix15(float2fix15(atan2(-ay, az) + 3.1415f), oneeightyoverpi);
     
     // Calculate gyro angle delta (measurement times timestep)
     gyro_angle_delta = -multfix15(gyro[0], zeropt001);
@@ -120,34 +123,58 @@ void on_pwm_wrap() {
     complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + 
                           multfix15(accel_angle, zeropt001);
     
-    // Convert the fixed-point complementary angle to float for the PID controller
-    //pitch_deg = fix2float15(complementary_angle);
-
-    //const fix15 error = target_angle - complementary_angle;
-   // const fix15 derivative = (error - prev_error) * 1000;
-    //prev_error = error;
-
     // Compute PID terms
-    fix15 error = target_angle - complementary_angle;
-    fix15 derivative = (error - prev_error) * 1000;
+    error = target_angle - complementary_angle;
+    derivative = (error - prev_error) * 1000;
     prev_error = error;
 
-    // Compute PID output
-    float motor_command = (kP * error) + (kI * integral) + (kD * derivative);
-
-    // Convert PID output to PWM duty cycle
-    uint16_t pwm_value = (uint16_t)(motor_command * 500 + 2500);
-
-    // Apply low-pass filter to motor signal (16-sample smoothing - time constant as recommended)
-    //motor_disp = motor_disp + ((pwm_value - motor_disp) >> 4); // Using 4 for shift (2^4 = 16)
-
-    // Limit motor power
-    if (motor_disp > 5000) motor_disp = 5000;
-    if (motor_disp < 0) motor_disp = 0;
-
-    // Set motor PWM duty cycle using filtered value
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, motor_disp);
-
+    // === Control signal computation (formerly in compute_control_signal) ===
+    
+    // Memory for past control value
+    static int old_control = 0;
+    
+    // Accumulate error with scaling
+    integral += error / 1000;
+    
+    // Anti-windup: if the integral term is too large, limit it
+    fix15 max_integral = divfix(int2fix15(25), float2fix15(kI));
+    if (integral > max_integral) {
+        integral = max_integral;
+    } else if (integral < -max_integral) {
+        integral = -max_integral;
+    }
+    
+    // Compute the PID controller output
+    pid_output = multfix15(float2fix15(kP), error) + 
+                 multfix15(float2fix15(kI), integral) + 
+                 multfix15(float2fix15(kD), derivative);
+    
+    // Add feed-forward compensation for gravity
+    fix15 sin_angle = float2fix15(sin(fix2float15(target_angle) * 3.1415 / 180.0));
+    fix15 feed_forward = multfix15(sin_angle, int2fix15(1500));
+    
+    // Calculate final control value
+    int control = fix2int15(pid_output + feed_forward);
+    
+    // Apply bounds
+    if (control <= 0) control = 0;
+    if (control >= 3000) control = 3000;
+    
+    // Apply rate limiting
+    if (control != old_control) {
+        if (control > old_control) {
+            old_control = min(control, old_control + 100);
+        } else {
+            old_control = max(control, old_control - 100);
+        }
+        
+        // Update PWM only if control value changed
+        pwm_set_chan_level(slice_num, PWM_CHAN_A, old_control);
+    }
+    
+    // Update motor display value
+    motor_disp = old_control;
+    
     // Signal VGA update
     PT_SEM_SIGNAL(pt, &vga_semaphore);
 }
