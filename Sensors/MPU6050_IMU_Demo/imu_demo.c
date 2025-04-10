@@ -1,387 +1,335 @@
 /**
  * V. Hunter Adams (vha3@cornell.edu)
- * 
- * This demonstration utilizes the MPU6050.
- * It gathers raw accelerometer/gyro measurements, scales
- * them, and plots them to the VGA display. The top plot
- * shows gyro measurements, bottom plot shows accelerometer
- * measurements.
- * 
- * HARDWARE CONNECTIONS
+ *
+ * This demonstration reads data from the MPU6050, applies a PID controller,
+ * and displays the processed data on a VGA screen. The top graph shows angle
+ * information while the bottom graph shows accelerometer readings.
+ *
+ * HARDWARE CONNECTIONS:
  *  - GPIO 16 ---> VGA Hsync
  *  - GPIO 17 ---> VGA Vsync
- *  - GPIO 18 ---> 330 ohm resistor ---> VGA Red
- *  - GPIO 19 ---> 330 ohm resistor ---> VGA Green
- *  - GPIO 20 ---> 330 ohm resistor ---> VGA Blue
+ *  - GPIO 18 ---> VGA Red (via 330Ω resistor)
+ *  - GPIO 19 ---> VGA Green (via 330Ω resistor)
+ *  - GPIO 20 ---> VGA Blue (via 330Ω resistor)
  *  - RP2040 GND ---> VGA GND
- *  - GPIO 8 ---> MPU6050 SDA
- *  - GPIO 9 ---> MPU6050 SCL
- *  - 3.3v ---> MPU6050 VCC
+ *  - GPIO 8  ---> MPU6050 SDA
+ *  - GPIO 9  ---> MPU6050 SCL
+ *  - 3.3V    ---> MPU6050 VCC
  *  - RP2040 GND ---> MPU6050 GND
  */
 
-
-// Include standard libraries
+// Standard includes
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-// Include PICO libraries
+
+// PICO libraries
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
-// Include hardware libraries
+
+// Hardware libraries
 #include "hardware/pwm.h"
-#include "hardware/dma.h"
 #include "hardware/irq.h"
-#include "hardware/adc.h"
-#include "hardware/pio.h"
 #include "hardware/i2c.h"
-// Include custom libraries
+
+// Custom libraries
 #include "vga16_graphics.h"
 #include "mpu6050.h"
 #include "pt_cornell_rp2040_v1_3.h"
 
+// Data arrays (fixed-point 15.16)
+fix15 rawAccel[3], smoothAccel[3], gyroVals[3];
 
-// Arrays in which raw measurements will be stored
-fix15 accel_raw[3], acceleration[3], gyro[3];
+#define AXIS_X 0
+#define AXIS_Y 1
+#define AXIS_Z 2
+#define GYRO_X 0
+#define GYRO_Y 1
+#define GYRO_Z 2
 
-// character array
-char screentext[40];
+// PID constants (fixed-point)
+fix15 Kp = int2fix15(240);
+fix15 Ki = int2fix15(80);
+fix15 Kd = int2fix15(40);
 
-// draw speed
-int threshold = 10 ;
+fix15 integralSum = 0;
+fix15 lastErr = 0;
 
-// Some macros for max/min/abs
-#define min(a,b) ((a<b) ? a:b)
-#define max(a,b) ((a<b) ? b:a)
-#define abs(a) ((a>0) ? a:-a)
+fix15 angleFromAccel = 0;
+fix15 gyroAngleChange = 0;
+fix15 fusedAngle = 0;
+fix15 targetAngle = int2fix15(0);
+int pwmValue = 0;
 
-// semaphore
-static struct pt_sem vga_semaphore ;
+// Buffer for text output on VGA
+char textBuffer[40];
 
-// Some paramters for PWM
-#define WRAPVAL 5000
-#define CLKDIV  25.0
-uint slice_num ;
+// Update rate for drawing (lower value = faster updates)
+int drawRate = 10;
 
-// Global/static variables for PID and plotting - all in fixed point (15.16 format)
-fix15 complementary_angle = 0;  // Current angle in fixed point
-fix15 target_angle = int2fix15(90);   // User-set target angle (default 90 degrees)
-fix15 integral = 0;             // Accumulated integral error
-fix15 prev_error = 0;           // Previous error for derivative term
-fix15 error = 0;                // Error term for PID
-fix15 derivative = 0;           // Derivative term for PID
-fix15 pid_output = 0;           // Raw PID controller output
-static uint16_t motor_disp = 0;        // Filtered motor command for display
-fix15 gyro_angle_delta = 0;
-fix15 accel_angle = 0;
+// Simple macros for min/max/abs
+#define MIN_VAL(a,b) ((a) < (b) ? (a) : (b))
+#define MAX_VAL(a,b) ((a) < (b) ? (b) : (a))
+#define ABS_VAL(a) ((a) < 0 ? -(a) : (a))
 
+// Semaphore for VGA thread synchronization
+static struct pt_sem vgaSem;
 
-// Fixed-point complementary angle (15.16 format)
-//static int complementary_angle = 0;
+// PWM configuration constants
+#define PWM_TOP 5000
+#define PWM_DIVIDER 25.0
+uint pwmSlice;
 
-// PID Constants (TUNE THESE)
-static float kP = 1.5;  
-static float kI = 0.01; 
-static float kD = 0.5;
-
-// Gyro bias correction
-static float gyro_bias_x = 0.5f;  // Adjust this value based on calibration
-
-// Complementary filter weights
-// Using 0.001 for accelerometer and 0.999 for gyro as recommended
-#define ACCEL_WEIGHT 0.001f
-#define GYRO_WEIGHT 0.999f
-
-// Interrupt service routine
-// Interrupt service routine
-void on_pwm_wrap() {
-    // Clear the interrupt flag
+// Interrupt handler: triggered when PWM counter wraps.
+void pwmWrapISR() {
     pwm_clear_irq(pwm_gpio_to_slice_num(5));
-    
-    // Read sensor data
-    mpu6050_read_raw(acceleration, gyro);
 
-    // Low-pass filter for raw readings
-    acceleration[0] += (accel_raw[0] - acceleration[0]) >> 4;
-    acceleration[1] += (accel_raw[1] - acceleration[1]) >> 4;
-    acceleration[2] += (accel_raw[2] - acceleration[2]) >> 4;
+    // Read sensor data from MPU6050.
+    mpu6050_read_raw(rawAccel, gyroVals);
 
-    // Convert fix15 to float for calculations
-    float ax = fix2float15(acceleration[0]);
-    float ay = fix2float15(acceleration[1]);
-    float az = fix2float15(acceleration[2]);
+    // Apply a simple low-pass filter.
+    smoothAccel[0] += (rawAccel[0] - smoothAccel[0]) >> 3;
+    smoothAccel[1] += (rawAccel[1] - smoothAccel[1]) >> 3;
+    smoothAccel[2] += (rawAccel[2] - smoothAccel[2]) >> 3;
     
-    // Calculate accelerometer angle without small angle approximation
-    accel_angle = multfix15(float2fix15(atan2(-ay, az) + 3.1415f), oneeightyoverpi);
-    
-    // Calculate gyro angle delta (measurement times timestep)
-    gyro_angle_delta = -multfix15(gyro[0], zeropt001);
-    
-    // Compute complementary filter - fixed point method
-    // Alpha = 0.999 for gyro (high-pass) and (1-alpha) = 0.001 for accelerometer (low-pass)
-    complementary_angle = multfix15(complementary_angle - gyro_angle_delta, zeropt999) + 
-                          multfix15(accel_angle, zeropt001);
-    
-    // Compute PID terms
-    error = target_angle - complementary_angle;
-    derivative = (error - prev_error) * 1000;
-    prev_error = error;
+    // Compute angle from accelerometer data.
+    angleFromAccel = multfix15(float2fix15(atan2(-smoothAccel[AXIS_Y], smoothAccel[AXIS_Z]) + (M_PI/2.0)), oneeightyoverpi);
+    gyroAngleChange = multfix15(gyroVals[GYRO_X], zeropt001);
+    fusedAngle = multfix15(fusedAngle - gyroAngleChange, zeropt999) +
+                 multfix15(angleFromAccel, zeropt001);
 
-    // === Control signal computation (formerly in compute_control_signal) ===
-    
-    // Memory for past control value
-    static int old_control = 0;
-    
-    // Accumulate error with scaling
-    integral += error / 1000;
-    
-    // Anti-windup: if the integral term is too large, limit it
-    fix15 max_integral = divfix(int2fix15(25), float2fix15(kI));
-    if (integral > max_integral) {
-        integral = max_integral;
-    } else if (integral < -max_integral) {
-        integral = -max_integral;
-    }
-    
-    // Compute the PID controller output
-    pid_output = multfix15(float2fix15(kP), error) + 
-                 multfix15(float2fix15(kI), integral) + 
-                 multfix15(float2fix15(kD), derivative);
-    
-    // Add feed-forward compensation for gravity
-    fix15 sin_angle = float2fix15(sin(fix2float15(target_angle) * 3.1415 / 180.0));
-    fix15 feed_forward = multfix15(sin_angle, int2fix15(1500));
-    
-    // Calculate final control value
-    int control = fix2int15(pid_output + feed_forward);
-    
-    // Apply bounds
-    if (control <= 0) control = 0;
-    if (control >= 3000) control = 3000;
-    
-    // Apply rate limiting
-    if (control != old_control) {
-        if (control > old_control) {
-            old_control = min(control, old_control + 100);
-        } else {
-            old_control = max(control, old_control - 100);
-        }
-        
-        // Update PWM only if control value changed
-        pwm_set_chan_level(slice_num, PWM_CHAN_A, old_control);
-    }
-    
-    // Update motor display value
-    motor_disp = old_control;
-    
-    // Signal VGA update
-    PT_SEM_SIGNAL(pt, &vga_semaphore);
+    // PID calculation (no feed-forward).
+    const fix15 err = targetAngle - fusedAngle;
+    const fix15 deriv = (err - lastErr) * 1000;
+    lastErr = err;
+    integralSum += err / 1000;
+
+    // Anti-windup for the integral term.
+    fix15 integralLimit = divfix(int2fix15(25), Ki);
+    if (integralSum > integralLimit)
+        integralSum = integralLimit;
+    else if (integralSum < -integralLimit)
+        integralSum = -integralLimit;
+
+    const fix15 pidOut = multfix15(Kp, err) + multfix15(Ki, integralSum) + multfix15(Kd, deriv);
+    int newPWM = fix2int15(pidOut);
+    if (newPWM < 0) newPWM = 0;
+    if (newPWM > 3000) newPWM = 3000;
+
+    // Smooth changes in PWM output.
+    //if (newPWM != pwmValue) {
+      //  if (newPWM > pwmValue)
+        //    pwmValue = MIN_VAL(newPWM, pwmValue + 100);
+        //else
+       //     pwmValue = MAX_VAL(newPWM, pwmValue - 100);
+    pwm_set_chan_level(pwmSlice, PWM_CHAN_A, newPWM);
+    //}
+
+    // Signal the VGA thread to update the display.
+    PT_SEM_SIGNAL(pt, &vgaSem);
 }
 
-
-// Thread that draws to VGA display
-// Thread that draws to VGA display
-static PT_THREAD (protothread_vga(struct pt *pt))
-{
-    // Indicate start of thread
-    PT_BEGIN(pt) ;
-
-    // We will start drawing at column 81
-    static int xcoord = 81 ;
-    
-    // Rescale the measurements for display
-    static float OldRange = 500. ; // (+/- 250)
-    static float NewRange = 150. ; // (looks nice on VGA)
-    static float OldMin = -250. ;
-    static float OldMax = 250. ;
-
-    // Control rate of drawing
-    static int throttle ;
-
-    // Draw the static aspects of the display
-    setTextSize(1) ;
-    setTextColor(WHITE);
-
-    // Draw bottom plot
-    drawHLine(75, 430, 5, CYAN) ;
-    drawHLine(75, 355, 5, CYAN) ;
-    drawHLine(75, 280, 5, CYAN) ;
-    drawVLine(80, 280, 150, CYAN) ;
-    sprintf(screentext, "0") ;
-    setCursor(50, 350) ;
-    writeString(screentext) ;
-    sprintf(screentext, "+2") ;
-    setCursor(50, 280) ;
-    writeString(screentext) ;
-    sprintf(screentext, "-2") ;
-    setCursor(50, 425) ;
-    writeString(screentext) ;
-
-    // Draw top plot
-    drawHLine(75, 230, 5, CYAN) ;
-    drawHLine(75, 155, 5, CYAN) ;
-    drawHLine(75, 80, 5, CYAN) ;
-    drawVLine(80, 80, 150, CYAN) ;
-    sprintf(screentext, "0") ;
-    setCursor(50, 150) ;
-    writeString(screentext) ;
-    sprintf(screentext, "+250") ;
-    setCursor(45, 75) ;
-    writeString(screentext) ;
-    sprintf(screentext, "-250") ;
-    setCursor(45, 225) ;
-    writeString(screentext) ;
-    
-
+// Thread to simulate button-triggered target angle changes.
+static PT_THREAD(buttonTask(struct pt *pt)) {
+    PT_BEGIN(pt);
+    static int btnState = 0, lastState = 0;
     while (true) {
-        // Wait on semaphore
-        PT_SEM_WAIT(pt, &vga_semaphore);
-        // Increment drawspeed controller
-        throttle += 1 ;
-        // If the controller has exceeded a threshold, draw
-        if (throttle >= threshold) { 
-            // Zero drawspeed controller
-            throttle = 0 ;
-
-            // Erase a column
-            drawVLine(xcoord, 0, 480, BLACK) ;
-
-            setTextColor2(WHITE, BLACK) ;
-            char pid_text[256] ;
-            sprintf(pid_text, "kP: %d | kI: %d | kD: %d        ", 
-                fix2int15(float2fix15(kP)), 
-                fix2int15(float2fix15(kI)), 
-                fix2int15(float2fix15(kD)));           
-            setTextSize(2);
-            setCursor(4, 4);
-            writeStringBig(pid_text) ;
-            
-            // Draw bottom plot (multiply by 120 to scale from +/-2 to +/-250)
-            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[0])*120.0)-OldMin)/OldRange)), WHITE) ;
-            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[1])*120.0)-OldMin)/OldRange)), RED) ;
-            drawPixel(xcoord, 430 - (int)(NewRange*((float)((fix2float15(acceleration[2])*120.0)-OldMin)/OldRange)), GREEN) ;
-
-            // Draw top plot
-            // drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[0]))-OldMin)/OldRange)), WHITE) ;
-            // drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[1]))-OldMin)/OldRange)), RED) ;
-            // drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro[2]))-OldMin)/OldRange)), GREEN) ;
-
-            
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(target_angle))-OldMin)/OldRange)), WHITE) ;
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(complementary_angle))-OldMin)/OldRange)), RED) ;
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(accel_angle))-OldMin)/OldRange)), GREEN) ;
-            drawPixel(xcoord, 230 - (int)(NewRange*((float)((fix2float15(gyro_angle_delta))-OldMin)/OldRange)), BLUE) ;
-
-            // Update horizontal cursor
-            if (xcoord < 609) {
-                xcoord += 1 ;
-            }
-            else {
-                xcoord = 81 ;
-            }
+        btnState = !gpio_get(15);
+        if (!btnState && lastState) {
+            targetAngle = int2fix15(-45);
+            PT_YIELD_usec(5000000);
+            targetAngle = int2fix15(-15);
+            PT_YIELD_usec(5000000);
+            targetAngle = int2fix15(-75);
+            PT_YIELD_usec(5000000);
+            targetAngle = int2fix15(-45);
+            PT_YIELD_usec(5000000);
+            targetAngle = int2fix15(0);
         }
+        lastState = btnState;
+        PT_YIELD_usec(100000);
     }
-    // Indicate end of thread
     PT_END(pt);
 }
 
-// User input thread. User can change draw speed
-static PT_THREAD (protothread_serial(struct pt *pt))
-{
-    PT_BEGIN(pt) ;
-    static char classifier ;
-    static int test_in ;
-    static float float_in ;
-    while(1) {
-        sprintf(pt_serial_out_buffer, "input a command: ");
-        serial_write ;
-        // spawn a thread to do the non-blocking serial read
-        serial_read ;
-        // convert input string to number
-        sscanf(pt_serial_in_buffer,"%c", &classifier) ;
+// VGA drawing thread with updated color choices.
+// Top graph uses: targetAngle in CYAN, fusedAngle in MAGENTA, accel-derived angle in YELLOW,
+// and gyro delta in WHITE.
+// Bottom graph uses: smoothAccel[0] in MAGENTA, smoothAccel[1] in BLUE, smoothAccel[2] in CYAN.
+static PT_THREAD(vgaTask(struct pt *pt)) {
+    PT_BEGIN(pt);
+    static int xPos = 81;
+    static float oldRange = 500.0, newRange = 150.0;
+    static float oldMin = -250.0;
+    static int counter = 0;
 
-        // num_independents = test_in ;
-        if (classifier=='t') {
-            sprintf(pt_serial_out_buffer, "timestep: ");
-            serial_write ;
-            serial_read ;
-            // convert input string to number
-            sscanf(pt_serial_in_buffer,"%d", &test_in) ;
-            if (test_in > 0) {
-                threshold = test_in ;
-            }
+    // Draw static elements (axes and labels) for both graphs.
+    setTextSize(1);
+    setTextColor(WHITE);
+    drawHLine(75, 430, 5, CYAN);
+    drawHLine(75, 355, 5, CYAN);
+    drawHLine(75, 280, 5, CYAN);
+    drawVLine(80, 280, 150, CYAN);
+    sprintf(textBuffer, "0");
+    setCursor(50, 350);
+    writeString(textBuffer);
+    sprintf(textBuffer, "+2");
+    setCursor(50, 280);
+    writeString(textBuffer);
+    sprintf(textBuffer, "-2");
+    setCursor(50, 425);
+    writeString(textBuffer);
+
+    drawHLine(75, 230, 5, CYAN);
+    drawHLine(75, 155, 5, CYAN);
+    drawHLine(75, 80, 5, CYAN);
+    drawVLine(80, 80, 150, CYAN);
+    sprintf(textBuffer, "0");
+    setCursor(50, 150);
+    writeString(textBuffer);
+    sprintf(textBuffer, "+180");
+    setCursor(45, 75);
+    writeString(textBuffer);
+    sprintf(textBuffer, "-180");
+    setCursor(45, 225);
+    writeString(textBuffer);
+
+    while (true) {
+        PT_SEM_WAIT(pt, &vgaSem);
+        counter++;
+        if (counter >= drawRate) {
+            counter = 0;
+            // Clear the current drawing column.
+            drawVLine(xPos, 0, 480, BLACK);
+
+            // Display PID parameters at the top-left of the screen.
+            setTextColor2(WHITE, BLACK);
+            char pidStr[256];
+            sprintf(pidStr, "P: %d | I: %d | D: %d        ", fix2int15(Kp), fix2int15(Ki), fix2int15(Kd));
+            setTextSize(2);
+            setCursor(4, 4);
+            writeStringBig(pidStr);
+
+            // Display PID parameters at the top-left of the screen.
+            setTextColor2(WHITE, BLACK);
+            char anglestr[256];
+            sprintf(anglestr, "Current Angle: %d | Desired Angle: %d ", fix2int15(fusedAngle), fix2int15(targetAngle));
+            setTextSize(2);
+            setCursor(4, 20);
+            writeStringBig(anglestr);
+
+            // Bottom graph: plot accelerometer data with new colors.
+            drawPixel(xPos, 430 - (int)(newRange * (((fix2float15(smoothAccel[0]) * 120.0) - oldMin) / oldRange)), MAGENTA);
+            drawPixel(xPos, 430 - (int)(newRange * (((fix2float15(smoothAccel[1]) * 120.0) - oldMin) / oldRange)), BLUE);
+            drawPixel(xPos, 430 - (int)(newRange * (((fix2float15(smoothAccel[2]) * 120.0) - oldMin) / oldRange)), CYAN);
+
+            // Top graph: plot angle data with new colors.
+            drawPixel(xPos, 230 - (int)(newRange * ((fix2float15(targetAngle) - oldMin) / oldRange)), CYAN);    // target angle
+            drawPixel(xPos, 230 - (int)(newRange * ((fix2float15(fusedAngle) - oldMin) / oldRange)), MAGENTA); // fused angle
+            drawPixel(xPos, 230 - (int)(newRange * ((fix2float15(angleFromAccel) - oldMin) / oldRange)), YELLOW); // accel angle
+            drawPixel(xPos, 230 - (int)(newRange * ((fix2float15(gyroAngleChange) - oldMin) / oldRange)), WHITE);  // gyro delta
+
+            // Move the drawing cursor.
+            xPos = (xPos < 609) ? xPos + 1 : 81;
         }
     }
-    PT_END(pt) ;
+    PT_END(pt);
 }
 
-// Entry point for core 1
-void core1_entry() {
-    pt_add_thread(protothread_vga) ;
-    pt_schedule_start ;
+// Serial thread for modifying PID constants and draw rate.
+static PT_THREAD(serialTask(struct pt *pt)) {
+    PT_BEGIN(pt);
+    static char command;
+    static int newRate;
+    static float newVal;
+
+    while (1) {
+        // New prompt "ctrlcmd" for serial input.
+        sprintf(pt_serial_out_buffer, "\n\rCurrent PWM Value: %d\n\rEnter Command [ctrlcmd]: ", pwmValue);
+        serial_write;
+        serial_read;
+        sscanf(pt_serial_in_buffer, "%c", &command);
+
+        if (command == 't') {
+            sprintf(pt_serial_out_buffer, "\n\rCurrent Draw Rate: %d\n\rNew Draw Rate: ", drawRate);
+            serial_write;
+            serial_read;
+            sscanf(pt_serial_in_buffer, "%d", &newRate);
+            if (newRate > 0) drawRate = newRate;
+        } else if (command == 'p') {
+            float curP = fix2float15(Kp);
+            sprintf(pt_serial_out_buffer, "\n\rCurrent P: %f\n\rNew P: ", curP);
+            serial_write;
+            serial_read;
+            sscanf(pt_serial_in_buffer, "%f", &newVal);
+            Kp = float2fix15(newVal);
+        } else if (command == 'i') {
+            float curI = fix2float15(Ki);
+            sprintf(pt_serial_out_buffer, "\n\rCurrent I: %f\n\rNew I: ", curI);
+            serial_write;
+            serial_read;
+            sscanf(pt_serial_in_buffer, "%f", &newVal);
+            Ki = float2fix15(newVal);
+        } else if (command == 'd') {
+            float curD = fix2float15(Kd);
+            sprintf(pt_serial_out_buffer, "\n\rCurrent D: %f\n\rNew D: ", curD);
+            serial_write;
+            serial_read;
+            sscanf(pt_serial_in_buffer, "%f", &newVal);
+            Kd = float2fix15(newVal);
+        } else if (command == 'a') {
+            float currAng = fix2float15(targetAngle);
+            sprintf(pt_serial_out_buffer, "\n\rCurrent Target Angle: %f\n\rNew Target Angle: ", currAng);
+            serial_write;
+            serial_read;
+            sscanf(pt_serial_in_buffer, "%f", &newVal);
+            targetAngle = float2fix15(newVal);
+        }
+    }
+    PT_END(pt);
+}
+
+// Core 1 entry: runs the VGA drawing thread.
+void core1_main() {
+    pt_add_thread(vgaTask);
+    pt_schedule_start;
 }
 
 int main() {
-
-    // Initialize stdio
     stdio_init_all();
+    initVGA();
 
-    // Initialize VGA
-    initVGA() ;
+    // I2C configuration for MPU6050.
+    i2c_init(I2C_CHAN, I2C_BAUD_RATE);
+    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
 
-    ////////////////////////////////////////////////////////////////////////
-    ///////////////////////// I2C CONFIGURATION ////////////////////////////
-    i2c_init(I2C_CHAN, I2C_BAUD_RATE) ;
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C) ;
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C) ;
-
-    // Pullup resistors on breakout board, don't need to turn on internals
-    // gpio_pull_up(SDA_PIN) ;
-    // gpio_pull_up(SCL_PIN) ;
-
-    // MPU6050 initialization
+    // Initialize MPU6050.
     mpu6050_reset();
-    mpu6050_read_raw(acceleration, gyro);
+    mpu6050_read_raw(smoothAccel, gyroVals);
 
-    ////////////////////////////////////////////////////////////////////////
-    ///////////////////////// PWM CONFIGURATION ////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
-    // Tell GPIO's 4,5 that they allocated to the PWM
+    // PWM configuration on GPIO 5 and 4.
     gpio_set_function(5, GPIO_FUNC_PWM);
     gpio_set_function(4, GPIO_FUNC_PWM);
-
-    // Find out which PWM slice is connected to GPIO 5 (it's slice 2, same for 4)
-    slice_num = pwm_gpio_to_slice_num(5);
-
-    // Mask our slice's IRQ output into the PWM block's single interrupt line,
-    // and register our interrupt handler
-    pwm_clear_irq(slice_num);
-    pwm_set_irq_enabled(slice_num, true);
-    irq_set_exclusive_handler(PWM_IRQ_WRAP, on_pwm_wrap);
+    pwmSlice = pwm_gpio_to_slice_num(5);
+    pwm_clear_irq(pwmSlice);
+    pwm_set_irq_enabled(pwmSlice, true);
+    irq_set_exclusive_handler(PWM_IRQ_WRAP, pwmWrapISR);
     irq_set_enabled(PWM_IRQ_WRAP, true);
+    pwm_set_wrap(pwmSlice, PWM_TOP);
+    pwm_set_clkdiv(pwmSlice, PWM_DIVIDER);
+    pwm_set_chan_level(pwmSlice, PWM_CHAN_B, 0);
+    pwm_set_chan_level(pwmSlice, PWM_CHAN_A, 0);
+    pwm_set_output_polarity(pwmSlice, 1, 0);
+    pwm_set_mask_enabled((1u << pwmSlice));
 
-    // This section configures the period of the PWM signals
-    pwm_set_wrap(slice_num, WRAPVAL) ;
-    pwm_set_clkdiv(slice_num, CLKDIV) ;
-
-    // This sets duty cycle
-    pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
-    pwm_set_chan_level(slice_num, PWM_CHAN_A, 0);
-
-    // Start the channel
-    pwm_set_mask_enabled((1u << slice_num));
-
-
-    ////////////////////////////////////////////////////////////////////////
-    ///////////////////////////// ROCK AND ROLL ////////////////////////////
-    ////////////////////////////////////////////////////////////////////////
-    // start core 1 
+    // Launch the VGA drawing thread on core 1.
     multicore_reset_core1();
-    multicore_launch_core1(core1_entry);
+    multicore_launch_core1(core1_main);
 
-    // start core 0
-    pt_add_thread(protothread_serial) ;
-    pt_schedule_start ;
-
+    // Add serial and button threads to core 0.
+    pt_add_thread(serialTask);
+    pt_add_thread(buttonTask);
+    pt_schedule_start;
 }
