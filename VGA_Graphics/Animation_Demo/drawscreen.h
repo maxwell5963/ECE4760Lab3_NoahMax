@@ -17,6 +17,6 @@
 /* main API
  *  playerX_world  – player’s horizontal position in pixels
  */
-void drawLevel(void);
+void drawLevel(float global_x);
 
 #endif /* DRAWSCREEN_H */

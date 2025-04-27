@@ -89,14 +89,70 @@ int main() {
 
 #endif
 
+float thingymajiggy = 340.0f;
+/// Animate a single goomba “swap” at (x,y)
+void animateGoombaShiftAndFlip(short start_x, short y, char bg_color) {
+  short x = start_x;
+  while (true) {
+      thingymajiggy += 1.0f;
+      // Frame 1
+      drawGoombaFrame1(x, y);
+      sleep_ms(500);
+
+      // Erase
+      fillRect(x, y, TILE_SIZE, TILE_SIZE, bg_color);
+
+      // Frame 2
+      drawGoombaFrame2(x, y);
+      sleep_ms(500);
+
+      // Erase
+      fillRect(x, y, TILE_SIZE, TILE_SIZE, bg_color);
+
+      // Shift right
+      x += 20;
+      if (x > SCREEN_W - TILE_SIZE) {
+          // wrap around
+          //x = 0;
+      }
+  }
+}
+
 int main() {
   stdio_init_all();
   initVGA();
-
   initLevel();    // populate level[][] from template
-  fillRect(0,0,SCREEN_W,SCREEN_H, OB);  // clear background
-  drawLevel();    // draw every tile
+  while (true) {
+    fillRect(0,0,SCREEN_W,SCREEN_H, OB);  // clear background
+    drawLevel(thingymajiggy);    // draw every tile
+    //drawGoombaFrame1( 50,  50);   // Goomba in top -left
+    //drawGoombaFrame2(50, 100);
+    drawGoombaDead(50, 150);
+    drawMarioBase(200, 100);   // Mario more to the right
+    drawCoinSprite(350,  75);   // Coin up and right
 
+    thingymajiggy += 5.0f;
+    // Frame 1
+    drawGoombaFrame1(50, 50);
+    sleep_ms(500);
+
+    // Erase
+    fillRect(50, 50, TILE_SIZE, TILE_SIZE, OB);
+
+    // Frame 2
+    drawGoombaFrame2(50, 50);
+    sleep_ms(500);
+
+    // Erase
+    fillRect(50, 50, TILE_SIZE, TILE_SIZE, OB);
+
+    // Shift right
+    //x += 20;
+    //if (x > SCREEN_W - TILE_SIZE) {
+        // wrap around
+        //x = 0;
+
+}
   while (true) {
       tight_loop_contents();
   }
