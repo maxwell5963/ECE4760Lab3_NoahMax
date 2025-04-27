@@ -23,6 +23,8 @@
  *
  */
 
+ #ifndef VGA16_GRAPHICS_H
+ #define VGA16_GRAPHICS_H
 
 // Give the I/O pins that we're using some names that make sense - usable in main()
  enum vga_pins {HSYNC=16, VSYNC, LO_GRN, HI_GRN, BLUE_PIN, RED_PIN} ;
@@ -61,3 +63,5 @@ void writeStringBig(char* str) ;
 void setTextColorBig(char, char); //works, but can use usual setTextColor2
 // 5x7 font
 void writeStringBold(char* str);
+
+#endif  // VGA16_GRAPHICS_H
