@@ -48,53 +48,13 @@
 // Screen resolution for our VGA output
 #define SCREEN_W 640
 #define SCREEN_H 480
-#define GROUND_TILE_W 30
-#define GROUND_TILE_H 30
-
-#if 0
-int main() {
-    // Initialize standard I/O (for debug over USB UART, if needed)
-    stdio_init_all();
-
-    // Initialize VGA output (sets up PIO, DMA, etc.)
-    initVGA();
-
-    // Fill the entire screen with a light-blue background
-    // (Assumes LIGHT_BLUE is defined in colors.h)
-    fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
-    // Draw a few sprites at arbitrary positions for PoC
-    drawGoombaFrame1( 50,  50);   // Goomba in top -left
-    drawGoombaDead(50, 150);
-    drawGoombaFrame2(50, 100);
-    drawMarioBase(200, 100);   // Mario more to the right
-    drawCoinSprite(350,  75);   // Coin up and right
-    drawFloatyBrick(50, 100);
-    drawMysteryBox(50, 150);
-    drawMysteryBox2(50, 200);
-        // draw a full row of ground tiles along the bottom
-        for(int x = -10; x < SCREEN_W; x += GROUND_TILE_W) {
-          // place each tile so its bottom edge == screen bottom
-          drawGroundTile(x, SCREEN_H - GROUND_TILE_H);
-      }
-
-
-    // Keep the display static
-    while (true) {
-        // tight loop to avoid exiting main
-        tight_loop_contents();
-    }
-
-    return 0;
-}
-
-#endif
+#define TILE_SIZE 30
 
 float thingymajiggy = 340.0f;
 /// Animate a single goomba “swap” at (x,y)
 void animateGoombaShiftAndFlip(short start_x, short y, char bg_color) {
   short x = start_x;
   while (true) {
-      thingymajiggy += 1.0f;
       // Frame 1
       drawGoombaFrame1(x, y);
       sleep_ms(500);
@@ -108,16 +68,10 @@ void animateGoombaShiftAndFlip(short start_x, short y, char bg_color) {
 
       // Erase
       fillRect(x, y, TILE_SIZE, TILE_SIZE, bg_color);
-
-      // Shift right
-      x += 20;
-      if (x > SCREEN_W - TILE_SIZE) {
-          // wrap around
-          //x = 0;
-      }
   }
 }
 
+#if 0
 int main() {
   stdio_init_all();
   initVGA();
@@ -130,6 +84,7 @@ int main() {
     drawGoombaDead(50, 150);
     drawMarioBase(200, 100);   // Mario more to the right
     drawCoinSprite(350,  75);   // Coin up and right
+    drawMarioRun1(250, 100);
 
     thingymajiggy += 5.0f;
     // Frame 1
@@ -158,3 +113,81 @@ int main() {
   }
   return 0;
 }
+  #endif
+
+
+// main function to draw the test palette
+void drawTestPalette(void) {
+    const short START_X   = 10;
+    const short START_Y   = 10;
+    const short SPACING_X = 40;   // horizontal gap between items
+    const short SPACING_Y = 40;   // vertical gap between rows
+  
+    short x = START_X;
+    short y = START_Y;
+  
+    fillRect(0, 0, SCREEN_W, SCREEN_H, BLUE);
+  
+    // — Row 0: Goomba anim frames
+    drawGoombaFrame1(          x,            y);        x += SPACING_X;
+    drawGoombaFrame2(          x,            y);        x += SPACING_X;
+    drawGoombaDead(            x,            y+14);        x += SPACING_X;
+    drawGoombaDeadFlipped(     x,            y+14);        x += SPACING_X;
+
+  
+    // — Row 1: Coin + Mario
+    y += SPACING_Y;
+    x  = START_X;
+    drawCoinSprite(            x,            y);        x += SPACING_X;
+    drawMarioBase(             x,            y);        x += SPACING_X;
+    drawMarioRun1(             x,            y);        x += SPACING_X;
+
+
+    // — Row 2: Tiles
+    y += SPACING_Y;
+    x  = START_X;
+    drawGroundTile(            x,            y);        x += TILE_SIZE + 5;
+    drawStairTile(             x,            y);        x += TILE_SIZE + 5;
+    drawFloatyBrick(           x,            y);        x += TILE_SIZE + 5;
+    drawMysteryBox(            x,            y);        x += TILE_SIZE + 5;
+    drawMysteryBox2(           x,            y);        x += TILE_SIZE + 5;
+
+    drawPipeTopLeft(  x, y); x += TILE_SIZE + 5;
+    drawPipeTopRight( x, y); x += TILE_SIZE + 5;
+    drawPipeBotLeft(  x, y); x += TILE_SIZE + 5;
+    drawPipeBotRight( x, y);
+
+    //NOTE FROM MAX: Anything animation-related must go at end due to the infinite while-loop
+    //otherwise it'll never get to it 
+    animateGoombaShiftAndFlip(180, 10, BLUE); 
+
+    // draw a full row of ground tiles along the bottom
+    for(int x = -10; x < SCREEN_W; x += TILE_SIZE) {
+      // place each tile so its bottom edge == screen bottom
+      drawGroundTile(x, SCREEN_H - TILE_SIZE);
+    }
+
+  }
+
+
+
+int main() {
+    // Initialize standard I/O (for debug over USB UART, if needed)
+    stdio_init_all();
+
+    // Initialize VGA output (sets up PIO, DMA, etc.)
+    initVGA();
+    drawTestPalette();
+
+    // Keep the display static
+    while (true) {
+        // tight loop to avoid exiting main
+        tight_loop_contents();
+    }
+
+    return 0;
+}
+
+
+
+

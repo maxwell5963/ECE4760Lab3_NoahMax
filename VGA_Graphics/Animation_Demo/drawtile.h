@@ -33,11 +33,11 @@ void drawStairTile(short x, short y);
 void drawFloatyBrick(short x, short y);
 void drawMysteryBox(short x, short y);
 void drawMysteryBox2(short x, short y);
-#if 0
+
 void drawPipeTopLeft(short x, short y);
 void drawPipeTopRight(short x, short y);
 void drawPipeBotLeft(short x, short y);
 void drawPipeBotRight(short x, short y);
-#endif
+
 
 #endif  // DRAWTILES_H

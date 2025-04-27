@@ -231,32 +231,36 @@
       DrawTile(x, y, &mystery_box_frame2[0][0]);
   }
   
-  #if 0
+  
   //──────────────────────────────────────────────────────────────────────────────
   // Pipe tile stubs (arrays to be defined later)
   //──────────────────────────────────────────────────────────────────────────────
   
   /** Draws the top-left pipe segment at (x, y). */
   void drawPipeTopLeft(short x, short y) {
-      DrawTile(x, y, &pipe_top_left[0][0]);
+      //DrawTile(x, y, &pipe_top_left[0][0]);
+      fillRect(x, y, 30, 30, DARK_GREEN);
   }
   
   /** Draws the top-right pipe segment at (x, y). */
   void drawPipeTopRight(short x, short y) {
-      DrawTile(x, y, &pipe_top_right[0][0]);
+      //DrawTile(x, y, &pipe_top_right[0][0]);
+      fillRect(x, y, 30, 30, DARK_GREEN);
   }
   
   /** Draws the bottom-left pipe segment at (x, y). */
   void drawPipeBotLeft(short x, short y) {
-      DrawTile(x, y, &pipe_bot_left[0][0]);
+      //DrawTile(x, y, &pipe_bot_left[0][0]);
+      fillRect(x, y, 30, 30, DARK_GREEN);
   }
   
   /** Draws the bottom-right pipe segment at (x, y). */
   void drawPipeBotRight(short x, short y) {
-      DrawTile(x, y, &pipe_bot_right[0][0]);
+      //DrawTile(x, y, &pipe_bot_right[0][0]);
+      fillRect(x, y, 30, 30, DARK_GREEN);
   }
   
-#endif 
+
   
   
   
