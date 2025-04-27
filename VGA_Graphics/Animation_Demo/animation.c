@@ -44,6 +44,7 @@
 #include "drawtile.h"
 #include "drawscreen.h"
 #include "leveldata.h"
+#include "controls.h"
 
 // Screen resolution for our VGA output
 #define SCREEN_W 640
@@ -157,15 +158,16 @@ void drawTestPalette(void) {
     drawPipeBotLeft(  x, y); x += TILE_SIZE + 5;
     drawPipeBotRight( x, y);
 
-    //NOTE FROM MAX: Anything animation-related must go at end due to the infinite while-loop
-    //otherwise it'll never get to it 
-    animateGoombaShiftAndFlip(180, 10, BLUE); 
-
     // draw a full row of ground tiles along the bottom
     for(int x = -10; x < SCREEN_W; x += TILE_SIZE) {
       // place each tile so its bottom edge == screen bottom
       drawGroundTile(x, SCREEN_H - TILE_SIZE);
     }
+
+
+    //NOTE FROM MAX: Anything animation-related must go at end due to the infinite while-loop
+    //otherwise it'll never get to it 
+    //animateGoombaShiftAndFlip(180, 10, BLUE); 
 
   }
 
@@ -181,8 +183,11 @@ int main() {
 
     // Keep the display static
     while (true) {
-        // tight loop to avoid exiting main
-        tight_loop_contents();
+      if (reset_pressed()) {
+          // clear screen to blue
+          fillRect(0, 0, SCREEN_W, SCREEN_H, LB);  
+      }
+      tight_loop_contents();
     }
 
     return 0;
