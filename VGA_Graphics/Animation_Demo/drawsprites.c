@@ -297,3 +297,7 @@
  void drawMarioRun1(short x, short y) {
      DrawSprite(x, y, &mario_run1[0][0], MARIO_W, MARIO_H);
  }
+
+ void drawMarioMidStride(short x, short y) {
+    DrawSprite(x, y, &mario_run_midstride[0][0], MARIO_W, MARIO_H);
+}

@@ -70,7 +70,7 @@ void animateGoombaShiftAndFlip(short start_x, short y, char bg_color) {
   }
 }
 
-#if 0
+
 int main() {
   stdio_init_all();
   initVGA();
@@ -85,7 +85,7 @@ int main() {
     drawCoinSprite(350,  75);   // Coin up and right
     drawMarioRun1(250, 100);
 
-    thingymajiggy += 5.0f;
+
     // Frame 1
     drawGoombaFrame1(50, 50);
     sleep_ms(500);
@@ -112,7 +112,7 @@ int main() {
   }
   return 0;
 }
-  #endif
+
 
 
 // main function to draw the test palette
@@ -140,6 +140,7 @@ void drawTestPalette(void) {
     drawCoinSprite(            x,            y);        x += SPACING_X;
     drawMarioBase(             x,            y);        x += SPACING_X;
     drawMarioRun1(             x,            y);        x += SPACING_X;
+    drawMarioMidStride(        x,            y);        x += SPACING_X;
 
 
     // — Row 2: Tiles
@@ -170,7 +171,7 @@ void drawTestPalette(void) {
   }
 
 
-
+#if 0
 int main() {
     // Initialize standard I/O (for debug over USB UART, if needed)
     stdio_init_all();
@@ -191,6 +192,6 @@ int main() {
     return 0;
 }
 
-
+#endif
 
 

@@ -44,6 +44,6 @@ void drawGoombaDeadFlipped(short x, short y);
 void drawCoinSprite(short x, short y);
 void drawMarioBase(short x, short y);
 void drawMarioRun1(short x, short y);
-
+void drawMarioMidStride(short x, short y);
 
 #endif  // DRAWSPRITES_H
