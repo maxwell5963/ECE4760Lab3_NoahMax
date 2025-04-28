@@ -43,11 +43,15 @@
 #include "drawscreen.h"
 #include "leveldata.h"
 #include "controls.h"
+#include "initstructs.h"
+#include "movementphysics.h"
 
 // Screen resolution for our VGA output
 #define SCREEN_W 640
 #define SCREEN_H 480
 #define TILE_SIZE 30
+
+static Character mario;
 
 float thingymajiggy = 340.0f;
 /// Animate a single goomba “swap” at (x,y)
@@ -75,13 +79,14 @@ int main() {
   stdio_init_all();
   initVGA();
   initLevel();    // populate level[][] from template
+  character_init(&mario, 310.0f, 415.0f);
   while (true) {
-    fillRect(0,0,SCREEN_W,SCREEN_H, OB);  // clear background
+    fillRect(0,0,SCREEN_W,SCREEN_H, BLUE);  // clear background
     drawLevel(thingymajiggy);    // draw every tile
     //drawGoombaFrame1( 50,  50);   // Goomba in top -left
     //drawGoombaFrame2(50, 100);
     drawGoombaDead(50, 150);
-    drawMarioBase(200, 100);   // Mario more to the right
+    drawMarioBase(mario.local_x, mario.local_y);   // Mario more to the right
     drawCoinSprite(350,  75);   // Coin up and right
     drawMarioRun1(250, 100);
 
