@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * controls.c
+ *
+ * Authors: Max Warner (mtw82), Noah Wilson (njw66)
+ *
+ * Description:
+ *   Button control implementation for setup and polling in our ECE 4760 Final
+ *   Project, a Super Mario Bros–inspired game.
+ *
+ ******************************************************************************/
+
 #include "controls.h"
 #include "pico/stdlib.h"
 #include "vga16_graphics.h"    // for fillRect, SCREEN_W, SCREEN_H

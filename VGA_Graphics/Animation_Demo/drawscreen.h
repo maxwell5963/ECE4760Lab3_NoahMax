@@ -1,3 +1,15 @@
+/*******************************************************************************
+ * drawscreen.h
+ *
+ * Authors: Max Warner (mtw82), Noah Wilson (njw66)
+ *
+ * Description:
+ *   Screen-drawing API for rendering the game world based on the player’s
+ *   position. Handles level scrolling and tile rendering for our ECE 4760
+ *   Final Project, a Super Mario Bros–inspired game.
+ *
+ ******************************************************************************/
+
 #ifndef DRAWSCREEN_H
 #define DRAWSCREEN_H
 

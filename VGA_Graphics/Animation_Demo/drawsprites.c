@@ -1,5 +1,5 @@
 /******************************************************************************
- * File: sprites.c
+ * File: drawsprites.c
  * 
  * Authors: Max Warner (mtw82), Noah Wilson (njw66)
  *

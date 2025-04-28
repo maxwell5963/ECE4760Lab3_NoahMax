@@ -2,8 +2,6 @@
 /**
  * Hunter Adams (vha3@cornell.edu)
  * 
- * This demonstration animates two balls bouncing about the screen.
- * Through a serial interface, the user can change the ball color.
  *
  * HARDWARE CONNECTIONS
  *  - GPIO 16 ---> VGA Hsync

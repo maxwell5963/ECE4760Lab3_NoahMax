@@ -1,4 +1,4 @@
-//=== sprites.h =============================================================
+//=== drawsprites.h =============================================================
 // Authors: Max Warner (mtw82), Noah Wilson (njw82)
 // Description:
 //    Sprite dimensions, extern declarations and draw-function prototypes

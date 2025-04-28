@@ -1,3 +1,15 @@
+/*******************************************************************************
+ * leveldata.c
+ *
+ * Authors: Max Warner (mtw82), Noah Wilson (njw66)
+ *
+ * Description:
+ *   Level data implementation for our ECE 4760 Final Project, a Super Mario
+ *   Bros–inspired game. Defines the default level layout and provides a
+ *   function to initialize the global tile map.
+ *
+ ******************************************************************************/
+
 #include "leveldata.h"
 
 // Default level template

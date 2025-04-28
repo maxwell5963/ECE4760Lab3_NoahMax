@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * controls.h
+ *
+ * Authors: Max Warner (mtw82), Noah Wilson (njw66)
+ *
+ * Description:
+ *   Button control setup and state-checking functions for movement and reset
+ *   functionality in our ECE 4760 Final Project, a Super Mario Bros–inspired game.
+ *
+ ******************************************************************************/
+
 #ifndef CONTROLS_H
 #define CONTROLS_H
 

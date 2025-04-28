@@ -1,3 +1,15 @@
+/*******************************************************************************
+ * leveldata.h
+ *
+ * Authors: Max Warner (mtw82), Noah Wilson (njw66)
+ *
+ * Description:
+ *   Level data and tile definitions for the game world in our ECE 4760 Final
+ *   Project, a Super Mario Bros–inspired game. Provides tile codes, map
+ *   dimensions, and initialization for the level layout.
+ *
+ ******************************************************************************/
+
 #ifndef LEVELDATA_H
 #define LEVELDATA_H
 
