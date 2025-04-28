@@ -148,7 +148,7 @@
      {TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR},
  };
  
- // Mario base sprite (standing around) (WIP)
+ // Mario base sprite (standing around) 
  const uint16_t mario_base[MARIO_H][MARIO_W] = {
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
@@ -184,7 +184,7 @@
     {TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL},
 };
 
- 
+// Mario running 
  const uint16_t mario_run1[MARIO_H][MARIO_W] = {
      {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
      {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
@@ -220,6 +220,42 @@
      {TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
  };
  
+ // Mario running (midstride)
+ const uint16_t mario_run_midstride[MARIO_H][MARIO_W] = {
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, LO, LO, LO, LO, BL, BL, LO, LO, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, LO, LO, LO, LO, BL, BL, LO, LO, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, BL, BL, LO, LO, BL, BL, LO, LO, LO, LO, LO, LO, BL, BL, LO, LO, LO, LO, LO, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, BL, BL, LO, LO, BL, BL, LO, LO, LO, LO, LO, LO, BL, BL, LO, LO, LO, LO, LO, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, BL, BL, LO, LO, BL, BL, BL, BL, LO, LO, LO, LO, LO, LO, BL, BL, LO, LO, LO, LO, LO, LO, LO, TR},
+    {TR, TR, TR, TR, TR, TR, BL, BL, LO, LO, BL, BL, BL, BL, LO, LO, LO, LO, LO, LO, BL, BL, LO, LO, LO, LO, LO, LO, LO, TR},
+    {TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, LO, LO, LO, LO, LO, LO, LO, LO, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, LO, LO, LO, LO, LO, LO, LO, LO, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, LO, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, DB, DB, DB, DB, DB, DB, DB, DB, DB, DB, DB, TR, TR, LO, LO, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, DB, DB, DB, DB, DB, DB, DB, DB, DB, DB, DB, TR, TR, LO, LO, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, LO, LO, DB, DB, YL, YL, DB, DB, DB, YL, YL, DB, DB, LO, LO, LO, LO, LO, LO, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, LO, LO, DB, DB, YL, YL, DB, DB, DB, YL, YL, DB, DB, LO, LO, LO, LO, LO, LO, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, LO, LO, LO, LO, RD, RD, RD, RD, DB, DB, DB, RD, RD, RD, RD, LO, LO, LO, LO, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, LO, LO, LO, LO, RD, RD, RD, RD, DB, DB, DB, RD, RD, RD, RD, LO, LO, LO, LO, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, BL, BL, BL, BL, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, BL, BL, BL, BL, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, BL, BL, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, BL, BL, RD, RD, RD, RD, RD, RD, TR, TR, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, BL, BL, BL, BL, RD, RD, RD, RD, RD, RD, TR, TR, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, BL, BL, BL, BL, RD, RD, RD, RD, RD, RD, TR, TR, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+};
+
  //─── draw-functions ────────────────────────────────────────────────────
  
  void DrawSprite(short x0, short y0, const uint16_t *sprite, short w, short h) {
