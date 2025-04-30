@@ -75,51 +75,6 @@ void animateGoombaShiftAndFlip(short start_x, short y, char bg_color) {
 }
 
 
-int main() {
-  stdio_init_all();
-  initVGA();
-  initLevel();    // populate level[][] from template
-  character_init(&mario, 310.0f, 415.0f);
-  while (true) {
-    fillRect(0,0,SCREEN_W,SCREEN_H, BLUE);  // clear background
-    drawLevel(thingymajiggy);    // draw every tile
-    //drawGoombaFrame1( 50,  50);   // Goomba in top -left
-    //drawGoombaFrame2(50, 100);
-    drawGoombaDead(50, 150);
-    drawMarioBase(mario.local_x, mario.local_y);   // Mario more to the right
-    drawCoinSprite(350,  75);   // Coin up and right
-    drawMarioRun1(250, 100);
-
-
-    // Frame 1
-    drawGoombaFrame1(50, 50);
-    sleep_ms(500);
-
-    // Erase
-    fillRect(50, 50, TILE_SIZE, TILE_SIZE, OB);
-
-    // Frame 2
-    drawGoombaFrame2(50, 50);
-    sleep_ms(500);
-
-    // Erase
-    fillRect(50, 50, TILE_SIZE, TILE_SIZE, OB);
-
-    // Shift right
-    //x += 20;
-    //if (x > SCREEN_W - TILE_SIZE) {
-        // wrap around
-        //x = 0;
-
-}
-  while (true) {
-      tight_loop_contents();
-  }
-  return 0;
-}
-
-
-
 // main function to draw the test palette
 void drawTestPalette(void) {
     const short START_X   = 10;
@@ -175,6 +130,90 @@ void drawTestPalette(void) {
 
   }
 
+  #define FRAME_RATE_US   (1000000/60)  // ~16.7 ms/frame
+  #define DB_THRESH       2             // # frames for debounce
+  #define RUN_THRESH      6             // # frames between run-frame toggles
+  
+  static PT_THREAD(protothread_mario(struct pt *pt))
+  {
+      PT_BEGIN(pt);
+  
+      // --- per-thread state ---
+      static Character mario;
+      static bool deb_left = false, deb_right = false, deb_jump = false;
+      static uint8_t db_left = 0, db_right = 0, db_jump = 0;
+      static bool run_frame = false;
+      static uint8_t run_count = 0;
+      static int begin_time, spare_time;
+  
+      // one-time init
+      controls_init();
+      character_init(&mario,
+                     /* spawnX */  0.0f,
+                     /* spawnY */ (TILE_H + MARIO_H));
+      // note: choose spawnY so Mario sits on ground :contentReference[oaicite:8]{index=8}&#8203;:contentReference[oaicite:9]{index=9}
+  
+      while(1) {
+          begin_time = time_us_32() ;
+  
+          //   — debounce LEFT —
+          bool rawL = left_pressed();
+          if(rawL == deb_left) {
+              db_left = 0;
+          } else if(++db_left >= DB_THRESH) {
+              deb_left = rawL;
+              db_left  = 0;
+          }
+          //   — debounce RIGHT —
+          bool rawR = right_pressed();
+          if(rawR == deb_right) {
+              db_right = 0;
+          } else if(++db_right >= DB_THRESH) {
+              deb_right = rawR;
+              db_right  = 0;
+          }
+          //   — debounce JUMP —
+          bool rawJ = jump_pressed();
+          if(rawJ == deb_jump) {
+              db_jump = 0;
+          } else if(++db_jump >= DB_THRESH) {
+              deb_jump = rawJ;
+              db_jump  = 0;
+          }
+  
+          //   — physics update —
+          physics_update_character(&mario,
+                                   deb_left,
+                                   deb_right,
+                                   deb_jump);
+  
+          //   — redraw entire scene —
+          //fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COL_SKY);
+          drawLevel(mario.global_x);
+  
+          //   — choose sprite —
+          if ((deb_left ^ deb_right) && mario.on_ground) {
+              // running on ground: toggle every RUN_THRESH frames
+              if (++run_count >= RUN_THRESH) {
+                  run_frame = !run_frame;
+                  run_count = 0;
+              }
+              if (run_frame)
+                  drawMarioRun1(mario.local_x, mario.local_y);
+              else
+                  drawMarioMidStride(mario.local_x, mario.local_y);
+          } else {
+              // idle OR in the air
+              drawMarioBase(mario.local_x, mario.local_y);
+          }
+  
+          //   — frame timing yield —
+          spare_time = FRAME_RATE_US - (time_us_32() - begin_time);
+          PT_YIELD_usec(spare_time);
+      }
+  
+      PT_END(pt);
+  }
 
 #if 0
 int main() {
@@ -197,6 +236,21 @@ int main() {
     return 0;
 }
 
-#endif
+#endif 
+
+static struct pt pt_mario;
+
+int main() {
+    stdio_init_all();
+    initVGA();
+    PT_INIT(&pt_mario);
+
+    while (1) {
+      drawTestPalette();
+      protothread_mario(&pt_mario);
+
+    }
+}
+
 
 
