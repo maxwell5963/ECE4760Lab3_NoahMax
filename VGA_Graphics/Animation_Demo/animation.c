@@ -45,6 +45,7 @@
 #include "controls.h"
 #include "initstructs.h"
 #include "movementphysics.h"
+#include "gamestates.h"
 
 // Screen resolution for our VGA output
 #define SCREEN_W 640
@@ -78,7 +79,7 @@ void animateGoombaShiftAndFlip(short start_x, short y, char bg_color) {
 // main function to draw the test palette
 void drawTestPalette(void) {
     const short START_X   = 10;
-    const short START_Y   = 10;
+    const short START_Y   = 100;
     const short SPACING_X = 40;   // horizontal gap between items
     const short SPACING_Y = 40;   // vertical gap between rows
   
@@ -134,87 +135,7 @@ void drawTestPalette(void) {
   #define DB_THRESH       2             // # frames for debounce
   #define RUN_THRESH      6             // # frames between run-frame toggles
   
-  static PT_THREAD(protothread_mario(struct pt *pt))
-  {
-      PT_BEGIN(pt);
   
-      // --- per-thread state ---
-      static Character mario;
-      static bool deb_left = false, deb_right = false, deb_jump = false;
-      static uint8_t db_left = 0, db_right = 0, db_jump = 0;
-      static bool run_frame = false;
-      static uint8_t run_count = 0;
-      static int begin_time, spare_time;
-  
-      // one-time init
-      controls_init();
-      character_init(&mario,
-                     /* spawnX */  0.0f,
-                     /* spawnY */ (TILE_H + MARIO_H));
-      // note: choose spawnY so Mario sits on ground :contentReference[oaicite:8]{index=8}&#8203;:contentReference[oaicite:9]{index=9}
-  
-      while(1) {
-          begin_time = time_us_32() ;
-  
-          //   — debounce LEFT —
-          bool rawL = left_pressed();
-          if(rawL == deb_left) {
-              db_left = 0;
-          } else if(++db_left >= DB_THRESH) {
-              deb_left = rawL;
-              db_left  = 0;
-          }
-          //   — debounce RIGHT —
-          bool rawR = right_pressed();
-          if(rawR == deb_right) {
-              db_right = 0;
-          } else if(++db_right >= DB_THRESH) {
-              deb_right = rawR;
-              db_right  = 0;
-          }
-          //   — debounce JUMP —
-          bool rawJ = jump_pressed();
-          if(rawJ == deb_jump) {
-              db_jump = 0;
-          } else if(++db_jump >= DB_THRESH) {
-              deb_jump = rawJ;
-              db_jump  = 0;
-          }
-  
-          //   — physics update —
-          physics_update_character(&mario,
-                                   deb_left,
-                                   deb_right,
-                                   deb_jump);
-  
-          //   — redraw entire scene —
-          //fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, COL_SKY);
-          drawLevel(mario.global_x);
-  
-          //   — choose sprite —
-          if ((deb_left ^ deb_right) && mario.on_ground) {
-              // running on ground: toggle every RUN_THRESH frames
-              if (++run_count >= RUN_THRESH) {
-                  run_frame = !run_frame;
-                  run_count = 0;
-              }
-              if (run_frame)
-                  drawMarioRun1(mario.local_x, mario.local_y);
-              else
-                  drawMarioMidStride(mario.local_x, mario.local_y);
-          } else {
-              // idle OR in the air
-              drawMarioBase(mario.local_x, mario.local_y);
-          }
-  
-          //   — frame timing yield —
-          spare_time = FRAME_RATE_US - (time_us_32() - begin_time);
-          PT_YIELD_usec(spare_time);
-      }
-  
-      PT_END(pt);
-  }
-
 #if 0
 int main() {
     // Initialize standard I/O (for debug over USB UART, if needed)
@@ -240,16 +161,155 @@ int main() {
 
 static struct pt pt_mario;
 
+static struct pt pt_timer;    // your Protothread control block
+static uint32_t last_ms;      // track last “second‐tick” timestamp
+
+//--------------------------------------------------------------------------------
+// This is the Protothread that drives the countdown.
+//--------------------------------------------------------------------------------
+PT_THREAD(timer_thread(struct pt *pt))
+{
+    PT_BEGIN(pt);
+
+    // stamp the start time
+    last_ms = to_ms_since_boot(get_absolute_time());
+
+    while (1) {
+        // wait until 1000ms have elapsed
+        PT_WAIT_UNTIL(pt,
+            (to_ms_since_boot(get_absolute_time()) - last_ms) >= 1000);
+
+        last_ms += 1000;    // bump our “last” forward by one second
+
+        if (timer > 0) {
+            --timer;
+        }
+        fillRect(335, 20, 80, 50, BLUE);
+        // once timer hits zero it just stays there
+    }
+
+    PT_END(pt);
+}
+
+//--------------------------------------------------------------------------------
+// Test thread for Mario animation
+//--------------------------------------------------------------------------------
+PT_THREAD(mario_proto(struct pt *pt))
+{
+    PT_BEGIN(pt);
+
+    // stamp the start time
+    last_ms = to_ms_since_boot(get_absolute_time());
+
+    while (1) {
+        // wait until 1000ms have elapsed
+        PT_WAIT_UNTIL(pt,
+            (to_ms_since_boot(get_absolute_time()) - last_ms) >= 1000);
+
+        last_ms += 1000;    // bump our “last” forward by one second
+
+        if (timer > 0) {
+            --timer;
+        }
+        fillRect(335, 20, 80, 50, BLUE);
+        // once timer hits zero it just stays there
+    }
+
+    PT_END(pt);
+}
+
+#define MARIO_X            170    // change as needed
+#define MARIO_Y            140
+#define ANIM_INTERVAL_MS   200     // frame flip every 200 ms
+
+static struct pt pt_mario;
+static uint32_t last_anim_ms;
+static bool     mario_toggle;
+
+PT_THREAD(mario_anim_thread(struct pt *pt))
+{
+    PT_BEGIN(pt);
+
+    // initialize our timestamp and toggle
+    last_anim_ms = to_ms_since_boot(get_absolute_time());
+    mario_toggle = false;
+
+    while (1) {
+        // wait until it's time for the next frame
+        PT_WAIT_UNTIL(pt,
+            (to_ms_since_boot(get_absolute_time()) - last_anim_ms)
+               >= ANIM_INTERVAL_MS);
+
+        last_anim_ms += ANIM_INTERVAL_MS;
+
+        // erase the old sprite
+        fillRect(MARIO_X, MARIO_Y, 30, 32, BLUE);
+
+        // draw the next frame
+        if (mario_toggle) {
+            drawMarioRun1(MARIO_X, MARIO_Y);
+        } else {
+            drawMarioMidStride(MARIO_X, MARIO_Y);
+        }
+        mario_toggle = !mario_toggle;
+    }
+
+    PT_END(pt);
+}
+
+#define GOOMBA_X           170       // adjust to where you want it
+#define GOOMBA_Y           100
+#define GOOMBA_INTERVAL_MS 300       // flip every 300 ms
+#define GOOMBA_SIZE        30        // as defined in sprites.h
+
+static struct pt pt_goomba;
+static uint32_t    last_goomba_ms;
+static bool        goomba_toggle;
+
+PT_THREAD(goomba_anim_thread(struct pt *pt))
+{
+    PT_BEGIN(pt);
+
+    last_goomba_ms = to_ms_since_boot(get_absolute_time());
+    goomba_toggle  = false;
+
+    while (1) {
+        PT_WAIT_UNTIL(pt,
+            (to_ms_since_boot(get_absolute_time()) - last_goomba_ms)
+              >= GOOMBA_INTERVAL_MS);
+
+        last_goomba_ms += GOOMBA_INTERVAL_MS;
+
+        // erase old Goomba
+        fillRect(GOOMBA_X, GOOMBA_Y, GOOMBA_SIZE, GOOMBA_SIZE, BLUE);
+
+        // draw next frame
+        if (goomba_toggle) {
+            drawGoombaFrame1(GOOMBA_X, GOOMBA_Y);
+        } else {
+            drawGoombaFrame2(GOOMBA_X, GOOMBA_Y);
+        }
+        goomba_toggle = !goomba_toggle;
+    }
+
+    PT_END(pt);
+}
+
 int main() {
     stdio_init_all();
     initVGA();
-    PT_INIT(&pt_mario);
+    init_game(); 
+    drawTestPalette();
 
     while (1) {
-      drawTestPalette();
-      protothread_mario(&pt_mario);
-
+        // let the timer thread run a little bit
+        timer_thread(&pt_timer);
+        mario_anim_thread(&pt_mario);
+        goomba_anim_thread(&pt_goomba);
+        // now update the display
+        drawStatusBar(score, timer, coins);
     }
+  
 }
 
 

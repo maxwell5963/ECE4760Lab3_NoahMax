@@ -1,27 +1,29 @@
-
-
-#if 0
-/* Global map stored in leveldata.c (row-major: level[row][col]) */
-extern char level[NUM_ROWS][NUM_COLS];
-
-/* ─── solid-fill helper ─── */
-static inline void fillRect(int x, int y, int w, int h, uint8_t colour)
-{
-    for (int yy = y; yy < y + h; ++yy)
-        for (int xx = x; xx < x + w; ++xx)
-            drawPixel(xx, yy, colour);
-}
-#endif
-
-/* ──────────────────────────────────────────────────────────────────────────
-   Render everything based on the player’s global X position.
-   Only rows/columns visible in the viewport are drawn.
-   ────────────────────────────────────────────────────────────────────────── */
-// drawlevel.c
+// Include the VGA grahics library
+#include "vga16_graphics.h"
+// Include standard libraries
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+// Include Pico libraries
+#include "pico/stdlib.h"
+#include "pico/divider.h"
+#include "pico/multicore.h"
+// Include hardware libraries
+#include "hardware/pio.h"
+#include "hardware/dma.h"
+#include "hardware/clocks.h"
+#include "hardware/pll.h"
+// Include protothreads
+#include "colors.h"
+#include "drawsprites.h"
+#include "drawtile.h"
 #include "drawscreen.h"
 #include "leveldata.h"
-#include "drawtile.h"
-#include "drawsprites.h"
+#include "controls.h"
+#include "initstructs.h"
+#include "movementphysics.h"
+#include <stdio.h>  // for sprintf
 
 void drawLevel(float global_x) {
     // TILE_SIZE is 30, as in drawtile.h
@@ -64,5 +66,42 @@ void drawLevel(float global_x) {
             }
         }
     }
+}
+
+void drawStatusBar(unsigned short score,
+    unsigned short timer,
+    unsigned short coins) {
+int textsize = 3;
+int width = 640;
+
+char buf[32];
+int x = 90;
+const int y = 30;                    // vertical position of text
+const int margin = 30;               // pixels between fields
+const int cw = 6 * textsize;         // character width in pixels (6px font * size)
+const int ch = 8 * textsize;         // character height if you ever need it
+
+// clear the top bar
+//fillRect(0, 0, width, ch + (y - 0), BLUE);
+
+setTextSize(3);
+setTextColor(WT);
+
+// Score
+sprintf(buf, "Score:%u", score);
+setCursor(x, y);
+writeString(buf);
+x += strlen(buf) * cw + margin;
+
+// Time
+sprintf(buf, "Time:%u", timer);
+setCursor(x, y);
+writeString(buf);
+x += strlen(buf) * cw + margin;
+
+// Coins
+sprintf(buf, "Coins:%u", coins);
+setCursor(x, y);
+writeString(buf);
 }
 

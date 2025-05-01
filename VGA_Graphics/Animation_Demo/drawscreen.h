@@ -30,5 +30,6 @@
  *  playerX_world  – player’s horizontal position in pixels
  */
 void drawLevel(float global_x);
+void drawStatusBar(unsigned short score, unsigned short timer, unsigned short coins);
 
 #endif /* DRAWSCREEN_H */
