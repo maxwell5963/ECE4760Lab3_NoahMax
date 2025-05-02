@@ -22,6 +22,7 @@
 #define TILE_GROUND '#'
 #define TILE_BRICK  'B'
 #define TILE_QBLOCK '?'
+#define TILE_DEACTIVATED_QBLOCK  'D'
 #define TILE_PIPE   'P'
 #define TILE_COIN   'C'
 #define TILE_ENEMY  'G'

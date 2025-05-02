@@ -55,6 +55,9 @@ void drawLevel(float global_x) {
                 case TILE_QBLOCK:
                     drawMysteryBox(x, y);
                     break;
+                case TILE_DEACTIVATED_QBLOCK:
+                    drawMysteryBox2(x, y);
+                    break;
                 case TILE_FLAG:
                     // you’ll need a drawFlag()...
                     break;
@@ -98,6 +101,11 @@ void clearscreen(float global_x) {
                 case TILE_QBLOCK:
                     fillRect(x, y, 30, 30, OB);
                     break;
+                case TILE_DEACTIVATED_QBLOCK:
+                    fillRect(x, y, 30, 30, OB);
+                    break;
+                fillRect(x, y, 30, 30, OB);
+                break;
                 case TILE_FLAG:
                     // you’ll need a drawFlag()...
                     break;
