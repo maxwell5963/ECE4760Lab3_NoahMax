@@ -1,14 +1,4 @@
-/*******************************************************************************
- * drawscreen.h
- *
- * Authors: Max Warner (mtw82), Noah Wilson (njw66)
- *
- * Description:
- *   Screen-drawing API for rendering the game world based on the player’s
- *   position. Handles level scrolling and tile rendering for our ECE 4760
- *   Final Project, a Super Mario Bros–inspired game.
- *
- ******************************************************************************/
+// drawscreen.h
 
 #ifndef DRAWSCREEN_H
 #define DRAWSCREEN_H
@@ -19,16 +9,15 @@
 #include "leveldata.h"
 #include "drawtile.h"
 
+
 /* geometry */
 #define SCREEN_WIDTH   640
 #define SCREEN_HEIGHT  480
 #define TILE_W         30
 #define TILE_H         30
-#define COL_SKY        0   /* palette index for sky blue */    
+#define COL_SKY        0   /* palette index for sky blue */
 
-/* main API
- *  playerX_world  – player’s horizontal position in pixels
- */
+void clearscreen(float global_x);
 void drawLevel(float global_x);
 
 #endif /* DRAWSCREEN_H */

@@ -3,13 +3,15 @@
 #define MOVEMENTPHYSICS_H
 
 #include <stdbool.h>
-#include "initstructs.h"   /* brings in Character */
+#include "initstructs.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Per-frame physics update for Mario */
+// Declare, don't define
+extern float world_x;
+
 void physics_update_character(Character *c,
                               bool leftPressed,
                               bool rightPressed,
