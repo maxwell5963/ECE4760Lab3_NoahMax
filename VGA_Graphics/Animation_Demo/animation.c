@@ -52,6 +52,7 @@
  #include "leveldata.h"
  #include "initstructs.h"
  #include "movementphysics.h"
+ #include "gamestates.h"
  
  /* ─── constants ─────────────────────────────────────────── */
  #define SCREEN_W            640
@@ -68,7 +69,41 @@
  /* ─── global game state ─────────────────────────────────── */
  Character mario;
  float     world_x = 320.0f;
+ bool game_over = false;
  
+static struct pt pt_timer;    // your Protothread control block
+static uint32_t last_ms;      // track last “second‐tick” timestamp
+
+ //--------------------------------------------------------------------------------
+// This is the Protothread that drives the countdown.
+//--------------------------------------------------------------------------------
+PT_THREAD(timer_thread(struct pt *pt))
+{
+    PT_BEGIN(pt);
+
+    // stamp the start time
+    last_ms = to_ms_since_boot(get_absolute_time());
+
+    while (1) {
+        // wait until 1000ms have elapsed
+        PT_WAIT_UNTIL(pt,
+            (to_ms_since_boot(get_absolute_time()) - last_ms) >= 1000);
+
+        last_ms += 1000;    // bump our “last” forward by one second
+ 
+        if (timerr > 0) {
+            --timerr;
+        }
+        if (timerr == 0){
+            game_over = true;
+        }
+        fillRect(352, 28, 55, 27, OB);
+        // once timer hits zero it just stays there
+    }
+
+    PT_END(pt);
+}
+
  /* ──────────────────────────────────────────────────────────
     Core 1: complete game loop
     ────────────────────────────────────────────────────────── */
@@ -76,8 +111,9 @@
  {
      /* 1) one‑time init */
      initVGA();
-     initLevel();
+     init_game();
      character_init(&mario, 50.0f, 418.0f);
+     PT_INIT(&pt_timer);
  
      /* buttons: inputs + pull‑ups */
      gpio_init(LEFT_BUTTON_PIN);   gpio_set_dir(LEFT_BUTTON_PIN,  GPIO_IN); gpio_pull_up(LEFT_BUTTON_PIN);
@@ -86,8 +122,9 @@
  
      /* draw first frame */
      fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
-     drawMarioBase(mario.local_x, mario.local_y);
+     drawMarioBaseRight(mario.local_x, mario.local_y);
      drawLevel(world_x);
+     initStatusBar(0, 0);
  
      /* frame counter for throttling physics */
      uint8_t frame_counter = 0;
@@ -99,6 +136,8 @@
          bool left  = !gpio_get(LEFT_BUTTON_PIN);
          bool right = !gpio_get(RIGHT_BUTTON_PIN);
          bool jump  = !gpio_get(JUMP_BUTTON_PIN);
+
+        PT_SCHEDULE(timer_thread(&pt_timer));
  
          /* update physics + scrolling every PHYSICS_PERIOD frames */
          if (++frame_counter >= PHYSICS_PERIOD) {
@@ -108,8 +147,16 @@
  
              /* (re)draw current frame after state change */
              drawLevel(world_x);
+
+            //re-draw status bar
+            fillRect(352, 28, 55, 27, OB);
+            writeTimer(timerr);
          }
- 
+         updateStatusBar(coins, score);
+        if (game_over){
+            drawGameOver(score, coins);
+            break;
+        }
          /* optional: small sleep here if you need to throttle loop speed
             tight_loop_contents(); */
      }

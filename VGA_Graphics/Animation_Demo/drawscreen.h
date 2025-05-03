@@ -19,5 +19,14 @@
 
 void clearscreen(float global_x);
 void drawLevel(float global_x);
+void initStatusBar(unsigned short score, unsigned short coins);
+void drawGameOver(unsigned short score, 
+                  unsigned short coins); 
+
+void updateStatusBar(unsigned short c, unsigned short s);
+void writeCoins(unsigned short coins);
+void writeScore(unsigned short score);
+void writeTimer(unsigned short time);
+
 
 #endif /* DRAWSCREEN_H */

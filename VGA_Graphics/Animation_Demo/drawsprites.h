@@ -1,3 +1,4 @@
+
 //=== drawsprites.h =============================================================
 // Authors: Max Warner (mtw82), Noah Wilson (njw82)
 // Description:
@@ -42,8 +43,11 @@ void drawGoombaFrame2(short x, short y);
 void drawGoombaDead(short x, short y);
 void drawGoombaDeadFlipped(short x, short y);
 void drawCoinSprite(short x, short y);
-void drawMarioBase(short x, short y);
-void drawMarioRun1(short x, short y);
-void drawMarioMidStride(short x, short y);
+void drawMarioBaseRight(short x, short y);
+void drawMarioRunRight(short x, short y);
+void drawMarioMidStrideRight(short x, short y);
+void drawMarioBaseLeft(short x, short y);
+void drawMarioRunLeft(short x, short y);
+void drawMarioMidStrideLeft(short x, short y);
 
 #endif  // DRAWSPRITES_H

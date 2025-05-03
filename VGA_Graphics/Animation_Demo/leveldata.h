@@ -15,7 +15,7 @@
 
 /* Map dimensions */
 #define NUM_ROWS 16      /* top-to-bottom */
-#define NUM_COLS 77     /* left-to-right */
+#define NUM_COLS 82     /* left-to-right */
 
 /* Tile codes */
 #define TILE_EMPTY  ' '
@@ -23,6 +23,7 @@
 #define TILE_BRICK  'B'
 #define TILE_QBLOCK '?'
 #define TILE_DEACTIVATED_QBLOCK  'D'
+#define TILE_STAIR  'S'
 #define TILE_PIPE   'P'
 #define TILE_COIN   'C'
 #define TILE_ENEMY  'G'
