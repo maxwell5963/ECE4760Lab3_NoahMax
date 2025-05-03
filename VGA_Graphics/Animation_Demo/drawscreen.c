@@ -222,6 +222,7 @@ void writeScore(unsigned short score) {
 
 void writeTimer(unsigned short time) {
     char buf[32];
+    fillRect(352, 28, 55, 27, YL);
     setTextSize(3);
     sprintf(buf, "%u", time);
     setCursor(352, y);

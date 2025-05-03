@@ -70,6 +70,7 @@
  Character mario;
  float     world_x = 320.0f;
  bool game_over = false;
+ bool reset_pressed = false;
  
 static struct pt pt_timer;    // your Protothread control block
 static uint32_t last_ms;      // track last “second‐tick” timestamp
@@ -149,10 +150,18 @@ PT_THREAD(timer_thread(struct pt *pt))
              drawLevel(world_x);
 
             //re-draw status bar
-            fillRect(352, 28, 55, 27, OB);
-            writeTimer(timerr);
+            if (coins != prev_coins || score != prev_score) {
+                fillRect(352, 28, 55, 27, OB);
+                updateStatusBar(coins, score);
+                prev_coins = coins;
+                prev_score = score;
+            }
+            if (prev_timerr != timerr) {
+                writeTimer(timerr);
+                prev_timerr = timerr;
+            }
          }
-         updateStatusBar(coins, score);
+        
         if (game_over){
             drawGameOver(score, coins);
             break;

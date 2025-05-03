@@ -31,4 +31,8 @@ extern unsigned short score; // score
 extern unsigned short timerr; // time (seconds)
 extern unsigned short coins; // coins collected
 
+extern unsigned short prev_score;
+extern unsigned short prev_coins;
+extern unsigned short prev_timerr;
+
 void init_game();
