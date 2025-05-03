@@ -58,7 +58,7 @@
  #define SCREEN_H            480
  
  /* update physics every PHYSICS_PERIOD frames */
- #define PHYSICS_PERIOD      10     /* ← only tweak needed */
+ #define PHYSICS_PERIOD      20     /* ← only tweak needed */
  
  /* Button pins (pulled‑up; short to GND when pressed) */
  #define LEFT_BUTTON_PIN     10
