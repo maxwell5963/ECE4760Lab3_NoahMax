@@ -86,7 +86,7 @@
  
      /* draw first frame */
      fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
-     drawMarioBase(mario.local_x, mario.local_y);
+     drawMarioBaseRight(mario.local_x, mario.local_y);
      drawLevel(world_x);
  
      /* frame counter for throttling physics */

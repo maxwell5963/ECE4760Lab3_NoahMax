@@ -290,7 +290,7 @@ const uint16_t mario_base_left[MARIO_H][MARIO_W] = {
     {TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR},
     {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR},
     {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR},
-}
+};
 
 const uint16_t mario_run_left[MARIO_H][MARIO_W] = {
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
@@ -325,7 +325,7 @@ const uint16_t mario_run_left[MARIO_H][MARIO_W] = {
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, TR, TR, TR},
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR},
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR},
-}
+};
 
 const uint16_t mario_run_midstride_left[MARIO_H][MARIO_W] = {
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, RD, RD, RD, RD, RD, RD, RD, RD, RD, RD, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
@@ -360,7 +360,7 @@ const uint16_t mario_run_midstride_left[MARIO_H][MARIO_W] = {
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, TR, TR},
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
     {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, BL, BL, BL, BL, BL, BL, BL, BL, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
-}
+};
 
  //─── draw-functions ────────────────────────────────────────────────────
  
@@ -400,6 +400,7 @@ const uint16_t mario_run_midstride_left[MARIO_H][MARIO_W] = {
      DrawSprite(x, y, &mario_base_right[0][0], MARIO_W, MARIO_H);
  }
  
+
  void drawMarioRunRight(short x, short y) {
      DrawSprite(x, y, &mario_run_right[0][0], MARIO_W, MARIO_H);
  }
