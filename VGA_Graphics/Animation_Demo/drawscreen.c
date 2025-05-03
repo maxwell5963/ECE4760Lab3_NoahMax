@@ -1,119 +1,86 @@
+/*───────────────────────────────────────────────────────────────
+  drawlevel.c  — exposes viewport_start_col & viewport_end_col
+────────────────────────────────────────────────────────────────*/
 
-
-#if 0
-/* Global map stored in leveldata.c (row-major: level[row][col]) */
-extern char level[NUM_ROWS][NUM_COLS];
-
-/* ─── solid-fill helper ─── */
-static inline void fillRect(int x, int y, int w, int h, uint8_t colour)
-{
-    for (int yy = y; yy < y + h; ++yy)
-        for (int xx = x; xx < x + w; ++xx)
-            drawPixel(xx, yy, colour);
-}
-#endif
-
-/* ──────────────────────────────────────────────────────────────────────────
-   Render everything based on the player’s global X position.
-   Only rows/columns visible in the viewport are drawn.
-   ────────────────────────────────────────────────────────────────────────── */
-// drawlevel.c
+/* Public header */
 #include "drawscreen.h"
+
+/* Engine headers */
 #include "leveldata.h"
 #include "drawtile.h"
 #include "drawsprites.h"
 #include "colors.h"
 
-void drawLevel(float global_x) {
-    // TILE_SIZE is 30, as in drawtile.h
-    float leftWorldX = global_x - (SCREEN_WIDTH * 0.5f);
+/* ─── GLOBALS (now visible to other .c files) ──────────────── */
+int viewport_start_col = 0;   /* first tile column currently visible  */
+int viewport_end_col   = 0;   /* one‑past‑last visible tile column    */
 
-    /* clamp within level limits */
+/* ─── helpers ──────────────────────────────────────────────── */
+static inline void clamp_left_world(float *leftWorldX)
+{
     const int levelWidthPx = NUM_COLS * TILE_W;
-    if (leftWorldX < 0) leftWorldX = 0;
-    if (leftWorldX > levelWidthPx - SCREEN_WIDTH)
-        leftWorldX = levelWidthPx - SCREEN_WIDTH;
 
-    /* first & last visible tile columns */
-    int startCol = (int)(leftWorldX / TILE_W);
-    int endCol   = (int)((leftWorldX + SCREEN_WIDTH) / TILE_W) + 1;
-    if (endCol > NUM_COLS) endCol = NUM_COLS;
+    if (*leftWorldX < 0)
+        *leftWorldX = 0;
+    else if (*leftWorldX > levelWidthPx - SCREEN_WIDTH)
+        *leftWorldX = levelWidthPx - SCREEN_WIDTH;
+}
 
-    for(int row = 0; row < NUM_ROWS; row++) {
-        for(int col = startCol; col < NUM_COLS; col++) {   
-            // convert tile‐coordinates to pixel‐coordinates
-            short x = col * TILE_SIZE - (int)leftWorldX;
-            short y = row * TILE_SIZE;
+/* ─────────────────────────────────────────────────────────────
+   Draw the background tiles that are currently on screen
+   (Mario’s global_x is the camera centre).
+ ─────────────────────────────────────────────────────────────*/
+void drawLevel(float global_x)
+{
+    /* find left edge of viewport in world space */
+    float leftWorldX = global_x - (SCREEN_WIDTH * 0.5f);
+    clamp_left_world(&leftWorldX);
 
-            switch(level[row][col]) {
-                case TILE_GROUND:
-                    drawGroundTile(x, y);
-                    break;
-                case TILE_BRICK:
-                    drawFloatyBrick(x, y);
-                    break;
-                case TILE_QBLOCK:
-                    drawMysteryBox(x, y);
-                    break;
-                case TILE_DEACTIVATED_QBLOCK:
-                    drawMysteryBox2(x, y);
-                    break;
-                case TILE_FLAG:
-                    // you’ll need a drawFlag()...
-                    break;
-                case TILE_EMPTY:
-                default:
-                    // nothing to draw
-                    break;
+    /* update globals so other modules can query them */
+    viewport_start_col = (int)(leftWorldX / TILE_W);
+    viewport_end_col   = (int)((leftWorldX + SCREEN_WIDTH) / TILE_W) + 1;
+    if (viewport_end_col > NUM_COLS) viewport_end_col = NUM_COLS;
+
+    /* render only the visible tiles */
+    for (int row = 0; row < NUM_ROWS; row++) {
+        for (int col = viewport_start_col; col < viewport_end_col; col++) {
+
+            /* convert tile coords → screen pixels */
+            short x = col * TILE_W - (int)leftWorldX;
+            short y = row * TILE_H;
+
+            switch (level[row][col]) {
+            case TILE_GROUND:             drawGroundTile   (x, y); break;
+            case TILE_BRICK:              drawFloatyBrick  (x, y); break;
+            case TILE_QBLOCK:             drawMysteryBox   (x, y); break;
+            case TILE_DEACTIVATED_QBLOCK: drawMysteryBox2  (x, y); break;
+            case TILE_FLAG:
+            case TILE_EMPTY:
+            default: /* nothing */                        break;
             }
         }
     }
 }
 
-void clearscreen(float global_x) {
-    // TILE_SIZE is 30, as in drawtile.h
+/* ─────────────────────────────────────────────────────────────
+   Quick “wipe” that fills every visible tile with sky colour.
+ ─────────────────────────────────────────────────────────────*/
+void clearscreen(float global_x)
+{
     float leftWorldX = global_x - (SCREEN_WIDTH * 0.5f);
+    clamp_left_world(&leftWorldX);
 
-    /* clamp within level limits */
-    const int levelWidthPx = NUM_COLS * TILE_W;
-    if (leftWorldX < 0) leftWorldX = 0;
-    if (leftWorldX > levelWidthPx - SCREEN_WIDTH)
-        leftWorldX = levelWidthPx - SCREEN_WIDTH;
+    viewport_start_col = (int)(leftWorldX / TILE_W);
+    viewport_end_col   = (int)((leftWorldX + SCREEN_WIDTH) / TILE_W) + 1;
+    if (viewport_end_col > NUM_COLS) viewport_end_col = NUM_COLS;
 
-    /* first & last visible tile columns */
-    int startCol = (int)(leftWorldX / TILE_W);
-    int endCol   = (int)((leftWorldX + SCREEN_WIDTH) / TILE_W) + 1;
-    if (endCol > NUM_COLS) endCol = NUM_COLS;
+    for (int row = 0; row < NUM_ROWS; row++) {
+        for (int col = viewport_start_col; col < viewport_end_col; col++) {
 
-    for(int row = 0; row < NUM_ROWS; row++) {
-        for(int col = startCol; col < NUM_COLS; col++) {   
-            // convert tile‐coordinates to pixel‐coordinates
-            short x = col * TILE_SIZE - (int)leftWorldX;
-            short y = row * TILE_SIZE;
+            short x = col * TILE_W - (int)leftWorldX;
+            short y = row * TILE_H;
 
-            switch(level[row][col]) {
-                case TILE_GROUND:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_BRICK:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_QBLOCK:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_DEACTIVATED_QBLOCK:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                fillRect(x, y, 30, 30, OB);
-                break;
-                case TILE_FLAG:
-                    // you’ll need a drawFlag()...
-                    break;
-                case TILE_EMPTY:
-                default:
-                    // nothing to draw
-                    break;
-            }
+            fillRect(x, y, TILE_W, TILE_H, OB);   /* sky‑blue wipe */
         }
     }
 }
