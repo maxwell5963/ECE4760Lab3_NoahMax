@@ -1,15 +1,18 @@
-/* movementphysics.c — generic block‑handling ceiling bonks */
+/* movementphysics.c — generic block‑handling, 5‑px tighter right‑side collision */
 
 #include "movementphysics.h"
 #include "colors.h"
 #include "drawsprites.h"
 #include "leveldata.h"
+#include "drawscreen.h"
+
+extern float world_x;
 
 /* ─── tunables ─────────────────────────────────────────── */
 #define SPEED_X         8.0f
-#define GRAVITY         1.2f
-#define MAX_FALL_SPEED  12.0f
-#define JUMP_VELOCITY   18.0f
+#define GRAVITY         3.0f
+#define MAX_FALL_SPEED  20.0f
+#define JUMP_VELOCITY   30.0f
 
 #define CHAR_W          30
 #define CHAR_H          32
@@ -31,61 +34,58 @@ static void handle_block_hit(int row, int col)
 
     switch (*tile)
     {
-    case TILE_BRICK:   /* break brick */
-        *tile = TILE_EMPTY;
-        /* TODO: spawn particle debris */
+    case TILE_BRICK:
+       *tile = TILE_EMPTY;
+       fillRect(0, 0, 480, 640, OB);
+       drawLevel(world_x);
         break;
-
-    case TILE_QBLOCK:  /* question block -> empty + coin */
+    case TILE_QBLOCK:
         *tile = TILE_DEACTIVATED_QBLOCK;
-        /* TODO: increment coins / spawn coin sprite */
+        clearscreen(world_x);
+        drawLevel(world_x);
         break;
-
-    case TILE_COIN:    /* free‑floating coin */
-        *tile = TILE_EMPTY;
-        /* TODO: give player coin */
-        break;
-
-    /* Unbreakable blocks: ground, pipe, etc. */
-    case TILE_GROUND:
-    case TILE_PIPE:
-    default:
-        /* just bump; no change */
-        break;
+    case TILE_COIN:    *tile = TILE_EMPTY;               break;
+    default:                                              break;
     }
 }
 
 /* bottom collision */
 static bool collides_bottom(const Character *c, float nextY)
 {
-    int row   = (int)(nextY + CHAR_H + 1) / TILE_H;
-    int col_l = (int)(c->global_x          ) / TILE_W;
-    int col_r = (int)(c->global_x + CHAR_W - 5) / TILE_W;
+    int row   = (int)(nextY + CHAR_H - 1) / TILE_H;
+    int col_l = (int)(c->global_x + 6) / TILE_W;
+    int col_r = (int)(c->global_x + CHAR_W - 1) / TILE_W;
     return tile_is_solid(row, col_l) || tile_is_solid(row, col_r);
 }
 
-/* ceiling collision (used only for detection) */
+/* ceiling collision */
 static bool collides_top(const Character *c, float nextY)
 {
     int row   = (int)(nextY - 1) / TILE_H;
-    int col_l = (int)(c->global_x          ) / TILE_W;
-    int col_r = (int)(c->global_x + CHAR_W - 5) / TILE_W;
+    int col_l = (int)(c->global_x + 6) / TILE_W;
+    int col_r = (int)(c->global_x + CHAR_W - 1) / TILE_W;
     return tile_is_solid(row, col_l) || tile_is_solid(row, col_r);
 }
 
-/* side walls */
+/*-----------------------------------------------------------------
+  Side‑wall collisions
+  • Left  probe: 1 px inside sprite  (prevents overlap)
+  • Right probe: 5 px deeper inside sprite than before
+                 (CHAR_W − 1 → CHAR_W − 6) so Mario can get
+                 5 px closer to a block on his right
+------------------------------------------------------------------*/
 static bool collides_left(const Character *c, float nextGlobalX)
 {
-    int col   = (int)(nextGlobalX - 1) / TILE_W;
-    int row_t = (int)(c->local_y            ) / TILE_H;
+    int col   = (int)(nextGlobalX + 6) / TILE_W;                 /* +1 px */
+    int row_t = (int)(c->local_y - 1) / TILE_H;
     int row_b = (int)(c->local_y + CHAR_H - 1) / TILE_H;
     return tile_is_solid(row_t, col) || tile_is_solid(row_b, col);
 }
 
 static bool collides_right(const Character *c, float nextGlobalX)
 {
-    int col   = (int)(nextGlobalX + CHAR_W + 1) / TILE_W;
-    int row_t = (int)(c->local_y            ) / TILE_H;
+    int col   = (int)(nextGlobalX + CHAR_W - 1) / TILE_W;        /* −6 px */
+    int row_t = (int)(c->local_y - 1) / TILE_H;
     int row_b = (int)(c->local_y + CHAR_H - 1) / TILE_H;
     return tile_is_solid(row_t, col) || tile_is_solid(row_b, col);
 }
@@ -114,11 +114,13 @@ void physics_update_character(Character *c,
                     c->local_x += dx;
                     c->global_x += dx;
                 }
-            } else {
+            } else { /* rightPressed */
                 if (c->local_x + dx <= 300.0f) {
                     c->local_x += dx;
                 } else {
+                    clearscreen(world_x);
                     world_x += dx;
+                    drawLevel(world_x);
                 }
                 c->global_x += dx;
             }
@@ -150,20 +152,15 @@ void physics_update_character(Character *c,
             bool left_solid  = tile_is_solid(row, col_l);
             bool right_solid = tile_is_solid(row, col_r);
 
-            /* --- decide which single tile to hit --- */
             if (left_solid && right_solid) {
-                /* two blocks → hit the centre one if solid */
                 if (tile_is_solid(row, col_mid))
                     handle_block_hit(row, col_mid);
             } else if (left_solid ^ right_solid) {
-                /* exactly one solid tile */
-                if (left_solid)  handle_block_hit(row, col_l);
-                else             handle_block_hit(row, col_r);
+                handle_block_hit(row, left_solid ? col_l : col_r);
             }
-            /* no solid tiles: nothing happens */
 
-            c->local_y = (row + 1) * TILE_H;   /* snap below */
-            c->vel_y   = GRAVITY;              /* start falling */
+            c->local_y = (row + 1) * TILE_H;
+            c->vel_y   = GRAVITY;
         }
         c->on_ground = false;
 

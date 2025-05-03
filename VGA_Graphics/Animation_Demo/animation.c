@@ -1,27 +1,31 @@
 /**
- * Hunter Adams (vha3@cornell.edu)
+ * Hunter Adams (vha3@cornell.edu)
  *
  * Mario‑style side‑scroll demo running on core 1.
  * Core 0 is left free for USB / CLI tasks.
  *
  * HARDWARE CONNECTIONS
- *  - GPIO 16 → VGA Hsync
- *  - GPIO 17 → VGA Vsync
- *  - GPIO 18 → 470 Ω → VGA Green
- *  - GPIO 19 → 330 Ω → VGA Green
- *  - GPIO 20 → 330 Ω → VGA Blue
- *  - GPIO 21 → 330 Ω → VGA Red
- *  - RP2040 GND → VGA GND
+ *  - GPIO 16 → VGA Hsync
+ *  - GPIO 17 → VGA Vsync
+ *  - GPIO 18 → 470 Ω → VGA Green
+ *  - GPIO 19 → 330 Ω → VGA Green
+ *  - GPIO 20 → 330 Ω → VGA Blue
+ *  - GPIO 21 → 330 Ω → VGA Red
+ *  - RP2040 GND → VGA GND
  *
- * BUTTONS (pulled‑up, press to GND)
- *  - GPIO 10 → Move Left
- *  - GPIO 12 → Move Right
- *  - GPIO 11 → Jump
+ * BUTTONS (pulled‑up, press to GND)
+ *  - GPIO 10 → Move Left
+ *  - GPIO 12 → Move Right
+ *  - GPIO 11 → Jump
  *
  * RESOURCES USED
- *  - PIO state machines 0, 1, 2 on PIO instance 0
+ *  - PIO state machines 0, 1, 2 on PIO instance 0
  *  - DMA channels (2, by claim mechanism)
  *  - 153.6 kB of RAM (pixel buffer)
+ *
+ * NOTE
+ *  Movement physics and scrolling are updated once every
+ *  PHYSICS_PERIOD frames instead of every single frame.
  */
 
  #include <stdio.h>
@@ -53,6 +57,9 @@
  #define SCREEN_W            640
  #define SCREEN_H            480
  
+ /* update physics every PHYSICS_PERIOD frames */
+ #define PHYSICS_PERIOD      10     /* ← only tweak needed */
+ 
  /* Button pins (pulled‑up; short to GND when pressed) */
  #define LEFT_BUTTON_PIN     10
  #define RIGHT_BUTTON_PIN    12
@@ -80,21 +87,31 @@
      /* draw first frame */
      fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
      drawMarioBase(mario.local_x, mario.local_y);
+     drawLevel(world_x);
+ 
+     /* frame counter for throttling physics */
+     uint8_t frame_counter = 0;
  
      /* 2) main loop */
      while (true) {
-         clearscreen(world_x);                 /* wipe prior frame */
  
          /* read inputs (active‑low) */
          bool left  = !gpio_get(LEFT_BUTTON_PIN);
          bool right = !gpio_get(RIGHT_BUTTON_PIN);
-         bool jump  = !gpio_get(JUMP_BUTTON_PIN);   /* NEW */
+         bool jump  = !gpio_get(JUMP_BUTTON_PIN);
  
-         /* physics + scrolling */
-         physics_update_character(&mario, left, right, jump);
+         /* update physics + scrolling every PHYSICS_PERIOD frames */
+         if (++frame_counter >= PHYSICS_PERIOD) {
+             frame_counter = 0;
  
-         /* render level */
-         drawLevel(world_x);
+             physics_update_character(&mario, left, right, jump);
+ 
+             /* (re)draw current frame after state change */
+             drawLevel(world_x);
+         }
+ 
+         /* optional: small sleep here if you need to throttle loop speed
+            tight_loop_contents(); */
      }
  }
  
