@@ -65,12 +65,12 @@
  #define LEFT_BUTTON_PIN     10
  #define RIGHT_BUTTON_PIN    12
  #define JUMP_BUTTON_PIN     11   /* NEW */
+ #define RESET_BUTTON_PIN    13
  
  /* ─── global game state ─────────────────────────────────── */
  Character mario;
  float     world_x = 320.0f;
  bool game_over = false;
- bool reset_pressed = false;
  
 static struct pt pt_timer;    // your Protothread control block
 static uint32_t last_ms;      // track last “second‐tick” timestamp
@@ -117,9 +117,10 @@ PT_THREAD(timer_thread(struct pt *pt))
      PT_INIT(&pt_timer);
  
      /* buttons: inputs + pull‑ups */
-     gpio_init(LEFT_BUTTON_PIN);   gpio_set_dir(LEFT_BUTTON_PIN,  GPIO_IN); gpio_pull_up(LEFT_BUTTON_PIN);
-     gpio_init(RIGHT_BUTTON_PIN);  gpio_set_dir(RIGHT_BUTTON_PIN, GPIO_IN); gpio_pull_up(RIGHT_BUTTON_PIN);
-     gpio_init(JUMP_BUTTON_PIN);   gpio_set_dir(JUMP_BUTTON_PIN,  GPIO_IN); gpio_pull_up(JUMP_BUTTON_PIN);
+     gpio_init(LEFT_BUTTON_PIN);   gpio_set_dir(LEFT_BUTTON_PIN,  GPIO_IN);  gpio_pull_up(LEFT_BUTTON_PIN);
+     gpio_init(RIGHT_BUTTON_PIN);  gpio_set_dir(RIGHT_BUTTON_PIN, GPIO_IN);  gpio_pull_up(RIGHT_BUTTON_PIN);
+     gpio_init(JUMP_BUTTON_PIN);   gpio_set_dir(JUMP_BUTTON_PIN,  GPIO_IN);  gpio_pull_up(JUMP_BUTTON_PIN);
+     gpio_init(RESET_BUTTON_PIN);  gpio_set_dir(RESET_BUTTON_PIN, GPIO_IN);  gpio_pull_up(RESET_BUTTON_PIN);
  
      /* draw first frame */
      fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
@@ -133,10 +134,31 @@ PT_THREAD(timer_thread(struct pt *pt))
      /* 2) main loop */
      while (true) {
  
-         /* read inputs (active‑low) */
-         bool left  = !gpio_get(LEFT_BUTTON_PIN);
-         bool right = !gpio_get(RIGHT_BUTTON_PIN);
-         bool jump  = !gpio_get(JUMP_BUTTON_PIN);
+        /* read inputs (active‑low) */
+        bool left  =          !gpio_get(LEFT_BUTTON_PIN);
+        bool right =          !gpio_get(RIGHT_BUTTON_PIN);
+        bool jump  =          !gpio_get(JUMP_BUTTON_PIN);
+        bool reset_pressed =  !gpio_get(RESET_BUTTON_PIN);
+
+        if (reset_pressed) {
+            // 1) Clear the screen
+            fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
+
+            // 2) Reset *all* game state
+            init_game();                // resets score, coins, timerr, prev_*, draws level & bar
+            world_x      = 320.0f;      // back to center start
+            game_over    = false;       // clear any “game over” flag
+            frame_counter = 0;          // restart your physics cadence
+
+            // 3) Re-position Mario
+            character_init(&mario, 50.0f, 418.0f);
+
+            // 4) Restart your 1 Hz protothread
+            PT_INIT(&pt_timer);
+
+            // 5) Jump right back to the top of the loop
+            continue;
+        }
 
         PT_SCHEDULE(timer_thread(&pt_timer));
  

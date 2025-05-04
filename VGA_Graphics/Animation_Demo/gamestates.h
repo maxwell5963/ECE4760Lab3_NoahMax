@@ -36,3 +36,4 @@ extern unsigned short prev_coins;
 extern unsigned short prev_timerr;
 
 void init_game();
+void reset_game();

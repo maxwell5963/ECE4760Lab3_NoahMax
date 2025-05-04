@@ -45,3 +45,7 @@ void init_game() {
     character_init(&mario, 50.0f, 418.0f);
     initStatusBar(score, coins);
 }
+
+void reset_game() {
+    return;
+}
