@@ -183,6 +183,39 @@
       {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL},
       {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL},
   };
+
+  const uint16_t flag_pole[TILE_SIZE][FLAG_WIDTH] = {
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+    {TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, WT, WT, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR, TR},
+};
   
   //──────────────────────────────────────────────────────────────────────────────
   // Core draw routine: renders a TILE_SIZE×TILE_SIZE block of pixels
@@ -258,6 +291,10 @@
   void drawPipeBotRight(short x, short y) {
       //DrawTile(x, y, &pipe_bot_right[0][0]);
       fillRect(x, y, 30, 30, DARK_GREEN);
+  }
+
+  void drawFlagPole(short x, short y) {
+    DrawTile(x, y, &flag_pole[0][0]);
   }
   
 

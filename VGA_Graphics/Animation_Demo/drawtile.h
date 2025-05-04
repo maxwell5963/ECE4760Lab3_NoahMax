@@ -12,6 +12,7 @@
 
 //─── tile dimensions ──────────────────────────────────────────────────────
 #define TILE_SIZE 30
+#define FLAG_WIDTH 2
 
 // tile declarations
 extern const uint16_t ground_tile[TILE_SIZE][TILE_SIZE];
@@ -23,6 +24,7 @@ extern const uint16_t pipe_top_left[TILE_SIZE][TILE_SIZE];
 extern const uint16_t pipe_top_right[TILE_SIZE][TILE_SIZE];
 extern const uint16_t pipe_bot_left[TILE_SIZE][TILE_SIZE];
 extern const uint16_t pipe_bot_right[TILE_SIZE][TILE_SIZE];
+extern const uint16_t flag_pole[TILE_SIZE][FLAG_WIDTH];
 
 // draw function declarations
 
@@ -38,6 +40,8 @@ void drawPipeTopLeft(short x, short y);
 void drawPipeTopRight(short x, short y);
 void drawPipeBotLeft(short x, short y);
 void drawPipeBotRight(short x, short y);
+
+void drawFlagPole(short x, short y);
 
 
 #endif  // DRAWTILES_H

@@ -66,7 +66,7 @@ void drawLevel(float global_x) {
                     drawMysteryBox2(x, y);
                     break;
                 case TILE_FLAG:
-                    // you’ll need a drawFlag()...
+                    drawFlagPole(x,y);
                     break;
                 case TILE_EMPTY:
                 default:
@@ -117,7 +117,7 @@ void clearscreen(float global_x) {
                 fillRect(x, y, 30, 30, OB);
                 break;
                 case TILE_FLAG:
-                    // you’ll need a drawFlag()...
+                    fillRect(x, y, 30, 30, OB);
                     break;
                 case TILE_EMPTY:
                 default:
