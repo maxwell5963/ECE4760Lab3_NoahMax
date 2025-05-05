@@ -222,7 +222,7 @@ void writeScore(unsigned short score) {
 
 void writeTimer(unsigned short time) {
     char buf[32];
-    fillRect(352, 28, 55, 27, YL);
+    fillRect(352, 28, 55, 27, OB);
     setTextSize(3);
     sprintf(buf, "%u", time);
     setCursor(352, y);
@@ -230,6 +230,7 @@ void writeTimer(unsigned short time) {
 }
 
 void updateStatusBar(unsigned short c, unsigned short s) {
+    setTextColor(WT); 
     char buf[32];
     sprintf(buf, "Score:");
     setCursor(70, y);

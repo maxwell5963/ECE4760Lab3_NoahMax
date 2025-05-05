@@ -13,12 +13,13 @@
  #include "drawsprites.h"   /* sprite draw fns */
  #include "leveldata.h"
  #include "drawscreen.h"
+ #include "gamestates.h"
  
  extern float world_x;
  
  /* ─── tunables ─────────────────────────────────────────────────────────── */
- #define SPEED_X           4.0f
- #define GRAVITY           3.0f
+ #define SPEED_X           16.0f
+ #define GRAVITY           4.0f
  #define MAX_FALL_SPEED   20.0f
  #define JUMP_VELOCITY    30.0f
  
@@ -44,6 +45,11 @@
  static void update_coin(void)
  {
      if (!coin.alive) return;
+
+     if (coin.life == COIN_LIFETIME) {
+        coins++;
+        score += 10;
+     }
  
      /* erase old */
      int old_sx = coin.local_x;
@@ -81,18 +87,26 @@
  static void handle_block_hit(int row, int col)
  {
      char *tile = &level[row][col];
+
+     float leftWorldX = world_x - (640 * 0.5f);
+     short x = col * TILE_W - (int)leftWorldX;
+     short y = row * TILE_H;
  
      switch (*tile) {
      case TILE_BRICK:
          *tile = TILE_EMPTY;
-         fillRect(0, 0, 480, 640, OB);
+         fillRect(x, y, TILE_W, TILE_H, OB);
          drawLevel(world_x);
          break;
      case TILE_QBLOCK:
          *tile = TILE_DEACTIVATED_QBLOCK;
+         if (coin.alive) {
+            coin.alive = false;
+            int sx = coin.local_x, sy = coin.local_y;
+            fillRect(sx, sy, COIN_W, COIN_H, OB);
+         }
          spawn_coin(row, col);
-         clearscreen(world_x);
-         drawLevel(world_x);
+         drawMysteryBox2(x,y);
          break;
      case TILE_COIN:
          *tile = TILE_EMPTY;
@@ -211,6 +225,11 @@
      if (jumpPressed && c->on_ground) {
          c->vel_y     = -JUMP_VELOCITY;
          c->on_ground = false;
+     }
+
+     if (c->local_y + JUMP_VELOCITY - GRAVITY <= 90) {
+        c->local_y = 70;
+        c->vel_y = 0.0f;
      }
  
      /* ── gravity ── */

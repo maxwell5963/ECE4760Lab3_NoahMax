@@ -130,6 +130,7 @@ PT_THREAD(timer_thread(struct pt *pt))
  
      /* frame counter for throttling physics */
      uint8_t frame_counter = 0;
+     uint32_t game_over_ms   = 0; 
  
      /* 2) main loop */
      while (true) {
@@ -160,6 +161,37 @@ PT_THREAD(timer_thread(struct pt *pt))
             continue;
         }
 
+        if (game_over) {
+            if (game_over_ms == 0) {
+                game_over_ms = to_ms_since_boot(get_absolute_time());
+                fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
+                drawGameOver(score, coins);
+            }
+        
+            // 2) on first frame of game-over, record the timestamp
+            if (game_over_ms == 0) {
+                game_over_ms = to_ms_since_boot(get_absolute_time());
+            }
+        
+            // 3) once 5 000 ms have elapsed, reset everything
+            else if (to_ms_since_boot(get_absolute_time()) - game_over_ms >= 5000) {
+                // clear the timer so next time we can re-stamp
+                game_over_ms = 0;
+        
+                // — your existing reset logic —
+                fillRect(0, 0, SCREEN_W, SCREEN_H, OB); // clear da screen
+                init_game();                            // resets score, coins, timerr, draws bar
+                world_x       = 320.0f;                 // back to center start
+                game_over = false;                      // clear the flag
+                frame_counter = 0;                      // restart physics cadence
+                character_init(&mario, 50.0f, 418.0f);  
+                PT_INIT(&pt_timer);                     // re-init timer
+            }
+    
+            // 4) skip all other updates while in game-over
+            continue;
+        }
+
         PT_SCHEDULE(timer_thread(&pt_timer));
  
          /* update physics + scrolling every PHYSICS_PERIOD frames */
@@ -167,27 +199,28 @@ PT_THREAD(timer_thread(struct pt *pt))
              frame_counter = 0;
  
              physics_update_character(&mario, left, right, jump);
+             writeTimer(timerr);
+
+            if (mario.local_y >= (SCREEN_H - 30)) {
+                game_over = true;
+            }
  
              /* (re)draw current frame after state change */
              drawLevel(world_x);
 
             //re-draw status bar
             if (coins != prev_coins || score != prev_score) {
-                fillRect(352, 28, 55, 27, OB);
+                //fillRect(352, 28, 55, 27, OB);
                 updateStatusBar(coins, score);
                 prev_coins = coins;
                 prev_score = score;
             }
-            if (prev_timerr != timerr) {
-                writeTimer(timerr);
-                prev_timerr = timerr;
-            }
+            //if (prev_timerr != timerr) {
+             //   writeTimer(timerr);
+            //    prev_timerr = timerr;
+            //}
          }
         
-        if (game_over){
-            drawGameOver(score, coins);
-            break;
-        }
          /* optional: small sleep here if you need to throttle loop speed
             tight_loop_contents(); */
      }

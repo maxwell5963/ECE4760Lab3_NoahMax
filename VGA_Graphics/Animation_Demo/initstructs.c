@@ -73,7 +73,5 @@
  {
      if (!coin) return;
      coin->alive = false;
-     coins++;
-     score += 10;
  }
  
