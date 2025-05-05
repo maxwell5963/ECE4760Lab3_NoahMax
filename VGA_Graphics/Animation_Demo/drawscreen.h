@@ -8,6 +8,7 @@
 #include "vga16_graphics.h"
 #include "leveldata.h"
 #include "drawtile.h"
+#include <stdbool.h>
 
 
 /* geometry */
@@ -22,6 +23,8 @@ void drawLevel(float global_x);
 void initStatusBar(unsigned short score, unsigned short coins);
 void drawGameOver(unsigned short score, 
                   unsigned short coins); 
+
+extern bool game_over_drawn;
 
 void updateStatusBar(unsigned short c, unsigned short s);
 void writeCoins(unsigned short coins);

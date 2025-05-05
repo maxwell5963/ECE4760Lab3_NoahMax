@@ -1,4 +1,3 @@
-// movementphysics.h
 #ifndef MOVEMENTPHYSICS_H
 #define MOVEMENTPHYSICS_H
 
@@ -9,8 +8,13 @@
 extern "C" {
 #endif
 
-// Declare, don't define
+// Shared world offset
 extern float world_x;
+
+// Shared game-over flag
+extern bool game_over;
+
+extern Character mario;
 
 void physics_update_character(Character *c,
                               bool leftPressed,

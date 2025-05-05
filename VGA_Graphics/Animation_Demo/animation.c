@@ -1,27 +1,27 @@
-/**
- * Hunter Adams (vha3@cornell.edu)
+/*
+ * Hunter Adams (vha3@cornell.edu)
  *
- * Mario‑style side‑scroll demo running on core 1.
- * Core 0 is left free for USB / CLI tasks.
+ * Mario-style side-scroll demo running on core 1.
+ * Core 0 is left free for USB / CLI tasks.
  *
  * HARDWARE CONNECTIONS
- *  - GPIO 16 → VGA Hsync
- *  - GPIO 17 → VGA Vsync
- *  - GPIO 18 → 470 Ω → VGA Green
- *  - GPIO 19 → 330 Ω → VGA Green
- *  - GPIO 20 → 330 Ω → VGA Blue
- *  - GPIO 21 → 330 Ω → VGA Red
- *  - RP2040 GND → VGA GND
+ *  - GPIO 16 -> VGA Hsync
+ *  - GPIO 17 -> VGA Vsync
+ *  - GPIO 18 -> 470 Ω -> VGA Green
+ *  - GPIO 19 -> 330 Ω -> VGA Green
+ *  - GPIO 20 -> 330 Ω -> VGA Blue
+ *  - GPIO 21 -> 330 Ω -> VGA Red
+ *  - RP2040 GND -> VGA GND
  *
- * BUTTONS (pulled‑up, press to GND)
- *  - GPIO 10 → Move Left
- *  - GPIO 12 → Move Right
- *  - GPIO 11 → Jump
+ * BUTTONS (pulled-up, press to GND)
+ *  - GPIO 10 -> Move Left
+ *  - GPIO 12 -> Move Right
+ *  - GPIO 11 -> Jump
  *
  * RESOURCES USED
- *  - PIO state machines 0, 1, 2 on PIO instance 0
- *  - DMA channels (2, by claim mechanism)
- *  - 153.6 kB of RAM (pixel buffer)
+ *  - PIO state machines 0,1,2 on PIO instance 0
+ *  - DMA channels (2, by claim mechanism)
+ *  - 153.6 kB of RAM (pixel buffer)
  *
  * NOTE
  *  Movement physics and scrolling are updated once every
@@ -59,64 +59,67 @@
  #define SCREEN_H            480
  
  /* update physics every PHYSICS_PERIOD frames */
- #define PHYSICS_PERIOD      10     /* ← only tweak needed */
+ #define PHYSICS_PERIOD      10     /* only tweak needed */
  
- /* Button pins (pulled‑up; short to GND when pressed) */
+ /* Button pins (pulled-up; short to GND when pressed) */
  #define LEFT_BUTTON_PIN     10
  #define RIGHT_BUTTON_PIN    12
  #define JUMP_BUTTON_PIN     11   /* NEW */
  #define RESET_BUTTON_PIN    13
  
  /* ─── global game state ─────────────────────────────────── */
- Character mario;
  float     world_x = 320.0f;
- bool game_over = false;
+ // bool game_over = false;   // GAME OVER functionality commented out
  
-static struct pt pt_timer;    // your Protothread control block
-static uint32_t last_ms;      // track last “second‐tick” timestamp
+ static struct pt pt_timer;    // your Protothread control block
+ static uint32_t last_ms;      // track last “second‐tick” timestamp
 
+ extern bool game_over;
+ 
  //--------------------------------------------------------------------------------
-// This is the Protothread that drives the countdown.
-//--------------------------------------------------------------------------------
-PT_THREAD(timer_thread(struct pt *pt))
-{
-    PT_BEGIN(pt);
-
-    // stamp the start time
-    last_ms = to_ms_since_boot(get_absolute_time());
-
-    while (1) {
-        // wait until 1000ms have elapsed
-        PT_WAIT_UNTIL(pt,
-            (to_ms_since_boot(get_absolute_time()) - last_ms) >= 1000);
-
-        last_ms += 1000;    // bump our “last” forward by one second
+ // This is the Protothread that drives the countdown.
+ //--------------------------------------------------------------------------------
+ PT_THREAD(timer_thread(struct pt *pt))
+ {
+     PT_BEGIN(pt);
  
-        if (timerr > 0) {
-            --timerr;
+     // stamp the start time
+     last_ms = to_ms_since_boot(get_absolute_time());
+ 
+     while (1) {
+         // wait until 1000ms have elapsed
+         PT_WAIT_UNTIL(pt,
+             (to_ms_since_boot(get_absolute_time()) - last_ms) >= 1000);
+ 
+         last_ms += 1000;    // bump our “last” forward by one second
+ 
+         if (timerr > 0) {
+             --timerr;
+         }
+         // if (timerr == 0) {
+         //     game_over = true;  // GAME OVER trigger removed
+         // }
+         if (!game_over) {  
+            fillRect(352, 28, 55, 27, OB);
         }
-        if (timerr == 0){
-            game_over = true;
-        }
-        fillRect(352, 28, 55, 27, OB);
-        // once timer hits zero it just stays there
-    }
-
-    PT_END(pt);
-}
-
+         // once timer hits zero it just stays there
+     }
+ 
+     PT_END(pt);
+ }
+ 
  /* ──────────────────────────────────────────────────────────
-    Core 1: complete game loop
+    Core 1: complete game loop
     ────────────────────────────────────────────────────────── */
  void core1_main(void)
  {
-     /* 1) one‑time init */
+     /* 1) one-time init */
      initVGA();
      init_game();
      character_init(&mario, 50.0f, 418.0f);
      PT_INIT(&pt_timer);
  
-     /* buttons: inputs + pull‑ups */
+     /* buttons: inputs + pull-ups */
      gpio_init(LEFT_BUTTON_PIN);   gpio_set_dir(LEFT_BUTTON_PIN,  GPIO_IN);  gpio_pull_up(LEFT_BUTTON_PIN);
      gpio_init(RIGHT_BUTTON_PIN);  gpio_set_dir(RIGHT_BUTTON_PIN, GPIO_IN);  gpio_pull_up(RIGHT_BUTTON_PIN);
      gpio_init(JUMP_BUTTON_PIN);   gpio_set_dir(JUMP_BUTTON_PIN,  GPIO_IN);  gpio_pull_up(JUMP_BUTTON_PIN);
@@ -130,111 +133,88 @@ PT_THREAD(timer_thread(struct pt *pt))
  
      /* frame counter for throttling physics */
      uint8_t frame_counter = 0;
-     uint32_t game_over_ms   = 0; 
+     // uint32_t game_over_ms   = 0;   // GAME OVER timing removed
  
      /* 2) main loop */
      while (true) {
- 
-        /* read inputs (active‑low) */
-        bool left  =          !gpio_get(LEFT_BUTTON_PIN);
-        bool right =          !gpio_get(RIGHT_BUTTON_PIN);
-        bool jump  =          !gpio_get(JUMP_BUTTON_PIN);
-        bool reset_pressed =  !gpio_get(RESET_BUTTON_PIN);
-
-        if (reset_pressed) {
-            // 1) Clear the screen
-            fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
-
-            // 2) Reset *all* game state
-            init_game();                // resets score, coins, timerr, prev_*, draws level & bar
-            world_x      = 320.0f;      // back to center start
-            game_over    = false;       // clear any “game over” flag
-            frame_counter = 0;          // restart your physics cadence
-
-            // 3) Re-position Mario
-            character_init(&mario, 50.0f, 418.0f);
-
-            // 4) Restart your 1 Hz protothread
-            PT_INIT(&pt_timer);
-
-            // 5) Jump right back to the top of the loop
-            continue;
-        }
-
-        if (game_over) {
-            if (game_over_ms == 0) {
-                game_over_ms = to_ms_since_boot(get_absolute_time());
-                fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
-                drawGameOver(score, coins);
-            }
-        
-            // 2) on first frame of game-over, record the timestamp
-            if (game_over_ms == 0) {
-                game_over_ms = to_ms_since_boot(get_absolute_time());
-            }
-        
-            // 3) once 5 000 ms have elapsed, reset everything
-            else if (to_ms_since_boot(get_absolute_time()) - game_over_ms >= 5000) {
-                // clear the timer so next time we can re-stamp
-                game_over_ms = 0;
-        
-                // — your existing reset logic —
-                fillRect(0, 0, SCREEN_W, SCREEN_H, OB); // clear da screen
-                init_game();                            // resets score, coins, timerr, draws bar
-                world_x       = 320.0f;                 // back to center start
-                game_over = false;                      // clear the flag
-                frame_counter = 0;                      // restart physics cadence
-                character_init(&mario, 50.0f, 418.0f);  
-                PT_INIT(&pt_timer);                     // re-init timer
-            }
-    
-            // 4) skip all other updates while in game-over
-            continue;
-        }
-
         PT_SCHEDULE(timer_thread(&pt_timer));
  
-         /* update physics + scrolling every PHYSICS_PERIOD frames */
-         if (++frame_counter >= PHYSICS_PERIOD) {
-             frame_counter = 0;
+         /* 2.2) read inputs (active-low) */
+         bool left  =          !gpio_get(LEFT_BUTTON_PIN);
+         bool right =          !gpio_get(RIGHT_BUTTON_PIN);
+         bool jump  =          !gpio_get(JUMP_BUTTON_PIN);
+         bool reset_pressed =  !gpio_get(RESET_BUTTON_PIN);
  
-             physics_update_character(&mario, left, right, jump);
-             writeTimer(timerr);
-
-            if (mario.local_y >= (SCREEN_H - 30)) {
-                game_over = true;
-            }
+         /* 2.3) handle reset button press */
+         if (reset_pressed) {
+             // 1) Clear the screen
+             fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
  
-             /* (re)draw current frame after state change */
-             drawLevel(world_x);
-
-            //re-draw status bar
-            if (coins != prev_coins || score != prev_score) {
-                //fillRect(352, 28, 55, 27, OB);
-                updateStatusBar(coins, score);
-                prev_coins = coins;
-                prev_score = score;
-            }
-            //if (prev_timerr != timerr) {
-             //   writeTimer(timerr);
-            //    prev_timerr = timerr;
-            //}
+             // 2) Reset *all* game state
+             init_game();                // resets score, coins, timerr, prev_*, draws level & bar
+             world_x      = 320.0f;      // back to center start
+             game_over    = false;       // clear GAME OVER flag commented out
+             game_over_drawn = false;    // clear GAME OVER drawn flag
+             frame_counter = 0;          // restart your physics cadence
+ 
+             // 3) Re-position Mario
+             character_init(&mario, 50.0f, 418.0f);
+ 
+             // 4) Restart your 1 Hz protothread
+             PT_INIT(&pt_timer);
+ 
+             // 5) Jump right back to the top of the loop
+             continue;
          }
-        
-         /* optional: small sleep here if you need to throttle loop speed
-            tight_loop_contents(); */
+         
+         if (game_over) {
+            if (!game_over_drawn) {          
+                drawGameOver(score, coins);
+            }
+         } else {
+            
+            if (++frame_counter >= PHYSICS_PERIOD) {
+
+                if (timerr <= 0) {
+                    game_over = true;
+                    drawGameOver(score, coins);
+                    continue;
+                }
+
+                frame_counter = 0;
+    
+                physics_update_character(&mario, left, right, jump);
+                writeTimer(timerr);
+    
+                // if (mario.local_y >= (SCREEN_H - 30)) {
+                //     game_over = true;  // GAME OVER fall detection commented
+                // }
+    
+                /* (re)draw current frame after state change */
+                drawLevel(world_x);
+    
+                // re-draw status bar
+                if (coins != prev_coins || score != prev_score) {
+                    //fillRect(352, 28, 55, 27, OB);
+                    updateStatusBar(coins, score);
+                    prev_coins = coins;
+                    prev_score = score;
+                }
+         }
+ 
      }
  }
+}
  
  /* ──────────────────────────────────────────────────────────
-    Core 0: just launches core 1 (free for logging / CLI)
+    Core 0: just launches core 1 (free for logging / CLI)
     ────────────────────────────────────────────────────────── */
  int main(void)
  {
      stdio_init_all();
      multicore_launch_core1(core1_main);
  
-     /* idle loop on core 0 */
+     /* idle loop on core 0 */
      while (true) { tight_loop_contents(); }
  
      return 0;   /* never reached */

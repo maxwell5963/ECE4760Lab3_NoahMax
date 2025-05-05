@@ -38,8 +38,7 @@ unsigned short prev_score  = 0;
 unsigned short prev_timerr = 0;
 
 void init_game() {
-    score = 0; timerr = 180; coins = 0; prev_coins = coins; prev_score = score; prev_timerr = timerr;
-    Character mario = {40.0, 62.0};
+    score = 0; timerr = 100; coins = 0; prev_coins = coins; prev_score = score; prev_timerr = timerr;
     fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, OB);
     initLevel();
     character_init(&mario, 50.0f, 418.0f);

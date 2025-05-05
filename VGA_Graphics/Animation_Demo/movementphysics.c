@@ -16,6 +16,8 @@
  #include "gamestates.h"
  
  extern float world_x;
+
+ Character mario;
  
  /* ─── tunables ─────────────────────────────────────────────────────────── */
  #define SPEED_X           16.0f
@@ -34,6 +36,8 @@
  #define COIN_LIFETIME   20          /* frames */
  
  static Coin coin = {0};
+
+ bool game_over = false;
  
  static void spawn_coin(int row, int col)
  {
@@ -230,6 +234,10 @@
      if (c->local_y + JUMP_VELOCITY - GRAVITY <= 90) {
         c->local_y = 70;
         c->vel_y = 0.0f;
+     }
+
+     if (c->local_y + c->vel_y - GRAVITY >= 445) {
+        game_over = true;
      }
  
      /* ── gravity ── */

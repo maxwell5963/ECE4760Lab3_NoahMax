@@ -27,6 +27,8 @@ static inline void fillRect(int x, int y, int w, int h, uint8_t colour)
 #include "string.h"
 #include <stdio.h>
 
+bool game_over_drawn = false;
+
 
 void drawLevel(float global_x) {
     // TILE_SIZE is 30, as in drawtile.h
@@ -200,6 +202,8 @@ void drawGameOver(unsigned short score, unsigned short coins) {
     sprintf(buf, "Score:%03u", score);
     setCursor(x, y);
     writeString(buf);
+
+    game_over_drawn = true;
 }
 
 void writeCoins(unsigned short coin) {
