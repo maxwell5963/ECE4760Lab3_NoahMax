@@ -16,6 +16,8 @@ extern bool game_over;
 
 extern Character mario;
 
+extern Coin coin;
+
 void physics_update_character(Character *c,
                               bool leftPressed,
                               bool rightPressed,

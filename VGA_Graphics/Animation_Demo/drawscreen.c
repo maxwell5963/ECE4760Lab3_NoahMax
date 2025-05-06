@@ -26,6 +26,7 @@ static inline void fillRect(int x, int y, int w, int h, uint8_t colour)
 #include "vga16_graphics.h"
 #include "string.h"
 #include <stdio.h>
+#include "movementphysics.h"
 
 bool game_over_drawn = false;
 
@@ -178,6 +179,8 @@ void drawGameOver(unsigned short score, unsigned short coins) {
 
     setTextSize(5);
     setTextColor(WT);   
+
+    coin.alive = false;
 
     //First, blank the screen out 
     fillRect(0, 0, width, height, BLACK);

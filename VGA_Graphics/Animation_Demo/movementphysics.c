@@ -35,7 +35,7 @@
  #define COIN_GRAVITY     1.0f
  #define COIN_LIFETIME   20          /* frames */
  
- static Coin coin = {0};
+ Coin coin = {0};
 
  bool game_over = false;
  

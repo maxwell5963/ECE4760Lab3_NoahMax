@@ -24,6 +24,7 @@
 #include "initstructs.h"
 #include "movementphysics.h"
 #include "gamestates.h"
+#include "movementphysics.h"
 
 // globally defined variables for score, time, and coins 
 // these can be modified at will in animation.c 

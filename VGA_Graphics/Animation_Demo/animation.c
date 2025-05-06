@@ -147,6 +147,7 @@
  
          /* 2.3) handle reset button press */
          if (reset_pressed) {
+            coin.alive = false;
              // 1) Clear the screen
              fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
  
