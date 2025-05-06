@@ -153,7 +153,7 @@
              // 2) Reset *all* game state
              init_game();                // resets score, coins, timerr, prev_*, draws level & bar
              world_x      = 320.0f;      // back to center start
-             game_over    = false;       // clear GAME OVER flag commented out
+             game_over    = false;       // clear GAME OVER flag
              game_over_drawn = false;    // clear GAME OVER drawn flag
              frame_counter = 0;          // restart your physics cadence
  

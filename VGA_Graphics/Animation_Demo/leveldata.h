@@ -15,7 +15,7 @@
 
 /* Map dimensions */
 #define NUM_ROWS 16      /* top-to-bottom */
-#define NUM_COLS 82     /* left-to-right */
+#define NUM_COLS 400     /* left-to-right */
 
 /* Tile codes */
 #define TILE_EMPTY  ' '
