@@ -32,7 +32,13 @@
  #define COIN_GRAVITY     1.0f
  #define COIN_LIFETIME   20          /* frames */
  
+<<<<<<< Updated upstream
  static Coin coin = {0};
+=======
+ Coin coin = {0};
+
+ bool game_over = false;
+>>>>>>> Stashed changes
  
  static void spawn_coin(int row, int col)
  {

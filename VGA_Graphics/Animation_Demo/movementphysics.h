@@ -12,6 +12,16 @@ extern "C" {
 // Declare, don't define
 extern float world_x;
 
+<<<<<<< Updated upstream
+=======
+// Shared game-over flag
+extern bool game_over;
+
+extern Character mario;
+
+extern Coin coin;
+
+>>>>>>> Stashed changes
 void physics_update_character(Character *c,
                               bool leftPressed,
                               bool rightPressed,
