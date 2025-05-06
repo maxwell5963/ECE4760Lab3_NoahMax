@@ -47,7 +47,7 @@ void drawLevel(float global_x) {
     if (endCol > NUM_COLS) endCol = NUM_COLS;
 
     for(int row = 0; row < NUM_ROWS; row++) {
-        for(int col = startCol; col < NUM_COLS; col++) {   
+        for(int col = startCol; col < endCol+1; col++) {   
             // convert tile‐coordinates to pixel‐coordinates
             short x = col * TILE_SIZE - (int)leftWorldX;
             short y = row * TILE_SIZE;
@@ -101,32 +101,13 @@ void clearscreen(float global_x) {
             short x = col * TILE_SIZE - (int)leftWorldX;
             short y = row * TILE_SIZE;
 
-            switch(level[row][col]) {
-                case TILE_GROUND:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_BRICK:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_QBLOCK:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_DEACTIVATED_QBLOCK:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                case TILE_STAIR:
-                    fillRect(x, y, 30, 30, OB);
-                    break;
-                fillRect(x, y, 30, 30, OB);
-                break;
-                case TILE_FLAG:
-                    // you’ll need a drawFlag()...
-                    break;
-                case TILE_EMPTY:
-                default:
-                    // nothing to draw
-                    break;
+            if (level[row][col] != TILE_EMPTY &&
+                level[row][col + 1] == TILE_EMPTY)
+            {
+                fillRect(x + TILE_SIZE - SPEED_X, y, SPEED_X, TILE_SIZE, OB); // Blue edge marker
             }
+
+
         }
     }
 }

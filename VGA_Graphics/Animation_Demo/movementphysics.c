@@ -20,7 +20,6 @@
  Character mario;
  
  /* ─── tunables ─────────────────────────────────────────────────────────── */
- #define SPEED_X           16.0f
  #define GRAVITY           4.0f
  #define MAX_FALL_SPEED   20.0f
  #define JUMP_VELOCITY    30.0f
@@ -34,6 +33,8 @@
  #define COIN_INIT_VY   (-12.0f)
  #define COIN_GRAVITY     1.0f
  #define COIN_LIFETIME   20          /* frames */
+
+ float SPEED_X = 8.0f;
  
  Coin coin = {0};
 
@@ -100,7 +101,6 @@
      case TILE_BRICK:
          *tile = TILE_EMPTY;
          fillRect(x, y, TILE_W, TILE_H, OB);
-         drawLevel(world_x);
          break;
      case TILE_QBLOCK:
          *tile = TILE_DEACTIVATED_QBLOCK;

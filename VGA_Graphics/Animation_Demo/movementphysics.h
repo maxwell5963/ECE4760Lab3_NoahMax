@@ -18,6 +18,8 @@ extern Character mario;
 
 extern Coin coin;
 
+extern float SPEED_X;
+
 void physics_update_character(Character *c,
                               bool leftPressed,
                               bool rightPressed,

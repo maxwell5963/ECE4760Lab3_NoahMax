@@ -59,7 +59,7 @@
  #define SCREEN_H            480
  
  /* update physics every PHYSICS_PERIOD frames */
- #define PHYSICS_PERIOD      10     /* only tweak needed */
+ #define PHYSICS_PERIOD      1     /* only tweak needed */
  
  /* Button pins (pulled-up; short to GND when pressed) */
  #define LEFT_BUTTON_PIN     10
@@ -75,6 +75,22 @@
  static uint32_t last_ms;      // track last “second‐tick” timestamp
 
  extern bool game_over;
+
+ void drawLevel2(float global_x) {
+    // TILE_SIZE is 30, as in drawtile.h
+    float leftWorldX = global_x - (SCREEN_WIDTH * 0.5f);
+
+    /* clamp within level limits */
+    const int levelWidthPx = NUM_COLS * TILE_W;
+    if (leftWorldX < 0) leftWorldX = 0;
+    if (leftWorldX > levelWidthPx - SCREEN_WIDTH)
+        leftWorldX = levelWidthPx - SCREEN_WIDTH;
+
+    /* first & last visible tile columns */
+    int startCol = (int)(leftWorldX / TILE_W);
+    int endCol   = (int)((leftWorldX + SCREEN_WIDTH) / TILE_W) + 1;
+    if (endCol > NUM_COLS) endCol = NUM_COLS;
+ }
  
  //--------------------------------------------------------------------------------
  // This is the Protothread that drives the countdown.
@@ -126,7 +142,6 @@
      gpio_init(RESET_BUTTON_PIN);  gpio_set_dir(RESET_BUTTON_PIN, GPIO_IN);  gpio_pull_up(RESET_BUTTON_PIN);
  
      /* draw first frame */
-     fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
      drawMarioBaseRight(mario.local_x, mario.local_y);
      drawLevel(world_x);
      initStatusBar(0, 0);
@@ -157,6 +172,7 @@
              game_over    = false;       // clear GAME OVER flag commented out
              game_over_drawn = false;    // clear GAME OVER drawn flag
              frame_counter = 0;          // restart your physics cadence
+             drawLevel(world_x);
  
              // 3) Re-position Mario
              character_init(&mario, 50.0f, 418.0f);
@@ -212,6 +228,7 @@
     ────────────────────────────────────────────────────────── */
  int main(void)
  {
+    fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
      stdio_init_all();
      multicore_launch_core1(core1_main);
  
