@@ -15,7 +15,15 @@
  #include "drawscreen.h"
  #include "gamestates.h"
  
+
+
  extern float world_x;
+
+ #define MAX_GOOMBAS 8
+ Goomba goombas[MAX_GOOMBAS];
+ static int next_goomba = 0;
+ 
+
 
  Character mario;
  
@@ -38,6 +46,16 @@
  static Coin coin = {0};
 
  bool game_over = false;
+
+  /*----------------------------------------------------------------------*/
+  void spawn_goomba(int row, int col) {
+    float gx   = col * TILE_W;       
+    float gy   = row * TILE_H;       
+    float velX = -2* 0.5f;    
+
+    goomba_init(&goombas[next_goomba], gx, gy, velX);  
+    next_goomba = (next_goomba + 1) % MAX_GOOMBAS;
+}
  
  static void spawn_coin(int row, int col)
  {
@@ -287,8 +305,36 @@
  
      /* ── draw sprite ── */
      draw_mario(c->local_x, c->local_y, moving_horiz);
- 
+     
+     /* Goomba Collision Handling */
+     for (int i = 0; i < MAX_GOOMBAS; i++) {
+        Goomba *g = &goombas[i];
+        if (!g->alive) continue;
+
+        g->local_x = (int)(g->global_x - (world_x - SCREEN_WIDTH*0.5f));
+        g->local_y = (int) g->global_y;
+        bool hitX = c->local_x < g->local_x + GOOMBA_SIZE
+                 && c->local_x + CHAR_W > g->local_x;
+        bool hitY = c->local_y < g->local_y + GOOMBA_SIZE
+                 && c->local_y + CHAR_H > g->local_y;
+        if (hitX && hitY) {
+            // stomping from above?
+            if (c->vel_y > 0.0f
+             && (c->local_y + CHAR_H) - g->local_y < CHAR_H/2) {
+                goomba_deactivate(g);            // flag as dead
+                score += 15;                    // reward points
+                c->vel_y = -JUMP_VELOCITY/2;     // bounce Mario
+
+                // redraw death sprite in place
+                fillRect(g->local_x, g->local_y,
+                         GOOMBA_SIZE, GOOMBA_SIZE, OB);
+                drawGoombaDead(g->local_x, g->local_y);
+            } else {
+                game_over = true;  // Mario runs into a live Goomba
+            }
+        }
+     }
      /* update coin */
      update_coin();
  }
- 
+

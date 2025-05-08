@@ -24,6 +24,7 @@ static inline void fillRect(int x, int y, int w, int h, uint8_t colour)
 #include "drawsprites.h"
 #include "colors.h"
 #include "vga16_graphics.h"
+#include "movementphysics.h" 
 #include "string.h"
 #include <stdio.h>
 

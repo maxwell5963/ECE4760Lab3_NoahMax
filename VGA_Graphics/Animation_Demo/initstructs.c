@@ -6,6 +6,8 @@
  #include "initstructs.h"
  #include <stddef.h>
  #include "gamestates.h"
+
+
  
  /*──────────────────── helpers ────────────────────────────*/
  static inline int fx_to_int(float v) { return (int)v; }
@@ -50,6 +52,8 @@
      if (!g) return;
      g->alive = false;
  }
+
+
  
  /*──────────────────── Coin ───────────────────────────────*/
  void coin_init(Coin *coin,

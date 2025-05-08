@@ -11,6 +11,11 @@ extern "C" {
 // Shared world offset
 extern float world_x;
 
+#define MAX_GOOMBAS 8
+
+extern Goomba goombas[MAX_GOOMBAS];
+void spawn_goomba(int row, int col);
+
 // Shared game-over flag
 extern bool game_over;
 
@@ -23,6 +28,7 @@ void physics_update_character(Character *c,
 
 #ifdef __cplusplus
 }
+ 
 #endif
 
 #endif /* MOVEMENTPHYSICS_H */
