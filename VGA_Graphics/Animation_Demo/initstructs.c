@@ -40,9 +40,10 @@
      g->global_x = spawnX;
      g->global_y = spawnY;
      g->vel_x    = velX;
+     g->vel_y    = 0.0f;
      g->local_x  = fx_to_int(spawnX);
      g->local_y  = fx_to_int(spawnY);
-     g->alive    = true;
+     g->alive    = false;
  }
  
  void goomba_deactivate(Goomba *g)

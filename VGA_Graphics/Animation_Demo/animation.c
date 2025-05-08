@@ -179,6 +179,26 @@
  
              // 4) Restart your 1 Hz protothread
              PT_INIT(&pt_timer);
+
+            goomba1.alive = false; // reset goomba alive status
+            goomba2.alive = false; // reset goomba alive status
+            goomba3.alive = false; // reset goomba alive status
+            goomba4.alive = false; // reset goomba alive status
+            goomba5.alive = false; // reset goomba alive status
+            goomba6.alive = false; // reset goomba alive status
+            goomba7.alive = false; // reset goomba alive status
+            goomba8.alive = false; // reset goomba alive status
+
+            spawn_goomba1 = false; // reset goomba spawn status
+            spawn_goomba2 = false; // reset goomba spawn status
+            spawn_goomba3 = false; // reset goomba spawn status
+            spawn_goomba4 = false; // reset goomba spawn status
+            spawn_goomba5 = false; // reset goomba spawn status
+            spawn_goomba6 = false; // reset goomba spawn status
+            spawn_goomba7 = false; // reset goomba spawn status
+            spawn_goomba8 = false; // reset goomba spawn status
+
+
  
              // 5) Jump right back to the top of the loop
              continue;
@@ -228,6 +248,11 @@
     ────────────────────────────────────────────────────────── */
  int main(void)
  {
+    set_sys_clock_khz(250000, true);  // 125 MHz system clock
+ 
+     /* 2) init the screen */
+     fillRect(0, 0, SCREEN_W, SCREEN_H, COL_SKY);
+     //fillRect(0, 0, SCREEN_W, SCREEN_H, OB);   // clear the screen with black
     fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
      stdio_init_all();
      multicore_launch_core1(core1_main);

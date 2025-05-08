@@ -21,6 +21,7 @@ typedef struct {
     float global_x;
     float global_y;
     float vel_x;
+    float vel_y;      /* current vertical speed (+down, ‑up)          */
     int   local_x;
     int   local_y;
     bool  alive;
