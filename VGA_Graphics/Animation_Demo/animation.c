@@ -251,7 +251,6 @@
     set_sys_clock_khz(250000, true);  // 125 MHz system clock
  
      /* 2) init the screen */
-     fillRect(0, 0, SCREEN_W, SCREEN_H, COL_SKY);
      //fillRect(0, 0, SCREEN_W, SCREEN_H, OB);   // clear the screen with black
     fillRect(0, 0, SCREEN_W, SCREEN_H, OB);
      stdio_init_all();

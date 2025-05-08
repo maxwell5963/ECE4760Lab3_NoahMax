@@ -78,6 +78,11 @@
         coins++;
         score += 10;
      }
+
+     if (coin.local_y <= 90){
+            coin.life = 0;
+            //fillRect(coin.local_x, coin.local_y, COIN_W, COIN_H, OB);
+     }
  
      /* erase old */
      int old_sx = coin.local_x;
@@ -267,7 +272,7 @@ void physics_update_goomba(Goomba *g) {
     g->local_y = (int)g->global_y;
 
     // choose frame
-    if (g->local_x > -GOOMBA_W) {
+    if (g->local_x > -GOOMBA_W && g->local_y < 470) {
         bool phase = (goomba_anim_counter / GOOMBA_ANIM_PERIOD) & 1;
         if (phase) {
             drawGoombaFrame1(g->local_x, g->local_y);
@@ -300,8 +305,10 @@ void physics_update_goombas(void) {
  {
      if (!c) return;
  
+     int old_sx, old_sy;
+     old_sx = c->local_x;
+     old_sy = c->local_y;
      /* erase old sprite */
-     fillRect(c->local_x, c->local_y, CHAR_W, CHAR_H, OB);
  
      /* ── horizontal ── */
      bool moving_horiz = leftPressed ^ rightPressed;
@@ -326,36 +333,22 @@ void physics_update_goombas(void) {
                      world_x += dx;
                      if (world_x >= 600) {
                         if (!goomba1.alive && !spawn_goomba1) {
-                            goomba_init(&goomba1, goomba1.global_x = world_x + 320, 418.0f,  GOOMBA_VELOCITY);
+                            goomba_init(&goomba1, goomba1.global_x = world_x + 320, 422.0f,  GOOMBA_VELOCITY);
                             goomba1.alive = true;
                             spawn_goomba1 = true;
                      }
                      if (world_x >= 1090) {
                         if (!goomba2.alive && !spawn_goomba2) {
-                            goomba_init(&goomba2, goomba2.global_x = world_x + 320, 420.0f,  GOOMBA_VELOCITY);
+                            goomba_init(&goomba2, goomba2.global_x = world_x + 320, 422.0f,  GOOMBA_VELOCITY);
                             goomba2.alive = true;
                             spawn_goomba2 = true;
                      }
                     }
                     if (world_x >= 1240) {
                         if (!goomba3.alive && !spawn_goomba3) {
-                            goomba_init(&goomba3, goomba3.global_x = world_x + 320, 420.0f,  GOOMBA_VELOCITY);
+                            goomba_init(&goomba3, goomba3.global_x = world_x + 320, 422.0f,  GOOMBA_VELOCITY);
                             goomba3.alive = true;
                             spawn_goomba3 = true;
-                     }
-                    }
-                    if (world_x >= 2200) {
-                        if (!goomba4.alive && !spawn_goomba4) {
-                            goomba_init(&goomba4, goomba4.global_x = world_x + 320, 420.0f,  GOOMBA_VELOCITY);
-                            goomba4.alive = true;
-                            spawn_goomba4 = true;
-                     }
-                    }
-                    if (world_x >= 2400) {
-                        if (!goomba5.alive && !spawn_goomba5) {
-                            goomba_init(&goomba5, goomba5.global_x = world_x + 320, 420.0f,  GOOMBA_VELOCITY);
-                            goomba5.alive = true;
-                            spawn_goomba5 = true;
                      }
                     }
                  }
@@ -374,6 +367,11 @@ void physics_update_goombas(void) {
      if (c->local_y + JUMP_VELOCITY - GRAVITY <= 90) {
         c->local_y = 70;
         c->vel_y = 0.0f;
+     }
+
+     if (c->global_x >= 11760) {
+        score += timerr;
+        game_over = true;
      }
 
      if (c->local_y + c->vel_y - GRAVITY >= 445) {
@@ -460,6 +458,18 @@ void physics_update_goombas(void) {
         }
     }
 }
+
+int new_sx = c->local_x;
+int new_sy = c->local_y;
+
+    for(int i=old_sx; i<(old_sx + CHAR_W); i++) {
+        for(int j=old_sy; j<(old_sy+CHAR_H); j++) {
+            if (i <= new_sx || i >= (new_sx + 28) ||
+                j <= new_sy || j >= (new_sy + CHAR_H)) {
+                drawPixel(i, j, OB);
+            }
+        }
+      }
 
  
      /* ── draw sprite ── */

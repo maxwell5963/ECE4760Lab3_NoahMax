@@ -19,6 +19,8 @@ extern const uint16_t stair_tile[TILE_SIZE][TILE_SIZE];
 extern const uint16_t floaty_brick[TILE_SIZE][TILE_SIZE];
 extern const uint16_t mystery_box[TILE_SIZE][TILE_SIZE];
 extern const uint16_t mystery_box_frame2[TILE_SIZE][TILE_SIZE];
+extern const uint16_t flag_pole[TILE_SIZE][TILE_SIZE];
+extern const uint16_t flag[TILE_SIZE][TILE_SIZE];
 extern const uint16_t pipe_top_left[TILE_SIZE][TILE_SIZE];
 extern const uint16_t pipe_top_right[TILE_SIZE][TILE_SIZE];
 extern const uint16_t pipe_bot_left[TILE_SIZE][TILE_SIZE];
@@ -27,6 +29,9 @@ extern const uint16_t pipe_bot_right[TILE_SIZE][TILE_SIZE];
 // draw function declarations
 
 void DrawTile(short x0, short y0, const uint16_t *tile);
+
+void drawFlagPole(short x, short y);
+void drawFlag(short x, short y);
 
 void drawGroundTile(short x, short y);
 void drawStairTile(short x, short y);

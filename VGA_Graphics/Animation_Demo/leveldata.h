@@ -15,7 +15,7 @@
 
 /* Map dimensions */
 #define NUM_ROWS 16      /* top-to-bottom */
-#define NUM_COLS 400     /* left-to-right */
+#define NUM_COLS 421     /* left-to-right */
 
 /* Tile codes */
 #define TILE_EMPTY  ' '
@@ -27,6 +27,7 @@
 #define TILE_PIPE   'P'
 #define TILE_COIN   'C'
 #define TILE_ENEMY  'G'
+#define TILE_FLAG_POLE 'P'
 #define TILE_FLAG   'F'
 
 /* Global tile map: level[row][col] */

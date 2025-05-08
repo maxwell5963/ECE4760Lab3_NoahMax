@@ -39,7 +39,7 @@ unsigned short prev_score  = 0;
 unsigned short prev_timerr = 0;
 
 void init_game() {
-    score = 0; timerr = 999; coins = 0; prev_coins = coins; prev_score = score; prev_timerr = timerr;
+    score = 0; timerr = 180; coins = 0; prev_coins = coins; prev_score = score; prev_timerr = timerr;
     fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, OB);
     initLevel();
     character_init(&mario, 50.0f, 418.0f);

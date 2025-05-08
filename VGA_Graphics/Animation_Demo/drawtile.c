@@ -183,7 +183,82 @@
       {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL},
       {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL},
   };
-  
+
+  const uint16_t flag_pole[30][30] = {
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+{OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, WT, WT, WT, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+
+  };
+
+  const uint16_t flag[30][30] = {
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    {OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, BL, BL, BL, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, OB, }, 
+    
+      };
+ 
+      void drawFlagPole(short x, short y) {
+           DrawTile(x, y, &flag_pole[0][0]);
+      }
+
+      void drawFlag(short x, short y) {
+        DrawTile(x, y, &flag[0][0]);
+   }
   //──────────────────────────────────────────────────────────────────────────────
   // Core draw routine: renders a TILE_SIZE×TILE_SIZE block of pixels
   //

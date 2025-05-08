@@ -68,8 +68,11 @@ void drawLevel(float global_x) {
                 case TILE_DEACTIVATED_QBLOCK:
                     drawMysteryBox2(x, y);
                     break;
+                case TILE_FLAG_POLE:
+                    drawFlagPole(x, y);
+                    break;
                 case TILE_FLAG:
-                    // you’ll need a drawFlag()...
+                    drawFlag(x, y);
                     break;
                 case TILE_EMPTY:
                 default:
