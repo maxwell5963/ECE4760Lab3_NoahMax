@@ -66,6 +66,9 @@
         that their walking animation stays in sync with the game’s 60 Hz update loop.
       </p>
         <li><strong>Logical structure:</strong></li>
+        We organized our game into distinct modules for simplicty. Each file was coupled with its own header file for easy compatibility between modules. We repurposed the animation.c file from Lab 2 and used
+        it to serve as our main file. We have dedicated files for drawing sprites, drawing tiles/screen, collision/movement physics, games states, struct handling, storing level data, as well as a colors
+        header file where we define our own shorthand definitions for the provided colors to make our arrays cleaner and easier to write/read visually. A summary of each is provided in the table below. 
       </p>
         <table>
   <thead>
@@ -143,8 +146,11 @@
 </table>
 
       </p>
-        <li><strong>Hardware/software trade-offs:</strong> Why you chose each</li>
-        <li><strong>Existing IP:</strong> Relevant patents, copyrights, trademarks</li>
+      </p>
+        In terms of intellectual property considerations, all graphics (tiles, sprites) are coded from scratch with
+        different color palettes and simplified shapes. We opted against including sound/music, but these could easily
+        have been sourced from the public domain or generated using AI tools. 
+      </p>
       </ul>
     </section>
 
