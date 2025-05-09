@@ -46,8 +46,103 @@
       <h2>High-Level Design</h2>
       <ul>
         <li><strong>Rationale &amp; sources:</strong> Where the idea came from</li>
+      </p>
+        We are both fond of retro, scrolling-style games. We also both particularly enjoyed lab 2 and loved the idea of doing something that you can directly interact with. As such,
+        we set out to create an as-accurate-as-possible recreation of the original Super Mario Bros. This idea also complemented our strengths well, as Noah is strong in areas dealing
+        in physics, while Max is much better at front-end and the artistic side of things. This allowed us to each focus on a different part we were stronger at. 
+      </p>
         <li><strong>Background math:</strong> Key formulas or algorithms</li>
-        <li><strong>Logical structure:</strong> Block diagram or flowchart</li>
+      </p>
+        At heart, the physics of the game are rooted in basic mechanics. Our physics core relies on simple Newtonian motion under constant gravitational acceleration, discretized per frame.
+        We provide a hard-cap of his downward velocity in order to prevent runaway fall speeds. When the jump button is pressed at ground contact, we give Mario an instantaneous upward velocity boost, 
+        after which gravity pulls him back down. Horizontal movement is handled by adding or subtracting a fixed speed each frame when the left or right button is held, but only if the tile-based collision 
+        check indicates no solid block in the way. By converting Mario’s world coordinates into tile indices, we can efficiently test the few tiles around his feet and sides to prevent him from walking or 
+        falling through walls.
+      </p>
+      </p>
+        To create the illusion of a scrolling world much larger than the 640×480 display, we maintain a single “world_x” offset that follows Mario once he moves past the center threshold. Instead of moving Mario
+        past that point, we shift the viewport by the same amount he would have moved, then redraw only the tiles and sprites visible in the new window. This technique keeps Mario visually centered while the 
+        background glides by. Enemy Goombas use the same gravity-and-bounce rules as Mario, plus a constant patrol speed that reverses whenever they hit a wall; their sprite frames advance on a simple timer so 
+        that their walking animation stays in sync with the game’s 60 Hz update loop.
+      </p>
+        <li><strong>Logical structure:</strong></li>
+      </p>
+        <table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Purpose / Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>drawtile.h</code></td>
+      <td>Declarations for tile‐map drawing routines and tile bitmap data.</td>
+    </tr>
+    <tr>
+      <td><code>drawtile.c</code></td>
+      <td>Implements functions to render individual tiles to the VGA buffer.</td>
+    </tr>
+    <tr>
+      <td><code>colors.h</code></td>
+      <td>Defines RGB color constants (e.g. <code>OB</code>, <code>YL</code>, <code>WT</code>).</td>
+    </tr>
+    <tr>
+      <td><code>gamestates.h</code></td>
+      <td>Enumerates the different game states (e.g. <code>PLAYING</code>, <code>GAME_OVER</code>).</td>
+    </tr>
+    <tr>
+      <td><code>gamestates.c</code></td>
+      <td>Implements the state‐machine logic for transitioning between menus, play, and game‐over screens.</td>
+    </tr>
+    <tr>
+      <td><code>drawsprites.h</code></td>
+      <td>Declares sprite rendering functions and animation frame constants.</td>
+    </tr>
+    <tr>
+      <td><code>drawsprites.c</code></td>
+      <td>Contains routines to draw and animate Mario, Goombas, coins, and other moving objects.</td>
+    </tr>
+    <tr>
+      <td><code>drawscreen.h</code></td>
+      <td>Function prototypes for drawing the level viewport and status bar.</td>
+    </tr>
+    <tr>
+      <td><code>drawscreen.c</code></td>
+      <td>Implements full‐screen redraws, including the scrolling tile window and HUD.</td>
+    </tr>
+    <tr>
+      <td><code>animation.c</code></td>
+      <td>Protothread‐based timers and animation schedulers (e.g. enemy walk cycles).</td>
+    </tr>
+    <tr>
+      <td><code>movementphysics.h</code></td>
+      <td>Declares physics update functions and constants (gravity, jump velocity).</td>
+    </tr>
+    <tr>
+      <td><code>movementphysics.c</code></td>
+      <td>Implements Mario and Goomba kinematics, collision detection, and boundary checks.</td>
+    </tr>
+    <tr>
+      <td><code>initstructs.h</code></td>
+      <td>Defines the data structures for characters, enemies, and game state.</td>
+    </tr>
+    <tr>
+      <td><code>initstructs.c</code></td>
+      <td>Initializes all game objects (position, velocity, alive flags, etc.) at startup/reset.</td>
+    </tr>
+    <tr>
+      <td><code>leveldata.h</code></td>
+      <td>Contains the raw, constant 16×421 tile map for Level 1.</td>
+    </tr>
+    <tr>
+      <td><code>leveldata.c</code></td>
+      <td>Copies the flash‐stored map into RAM and handles runtime modifications (e.g., Q‐block hits).</td>
+    </tr>
+  </tbody>
+</table>
+
+      </p>
         <li><strong>Hardware/software trade-offs:</strong> Why you chose each</li>
         <li><strong>Existing IP:</strong> Relevant patents, copyrights, trademarks</li>
       </ul>
