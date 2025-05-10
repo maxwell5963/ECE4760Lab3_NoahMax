@@ -159,9 +159,50 @@
       <h2>Program/Hardware Design</h2>
       <ul>
         <li><strong>Program details:</strong> What was tricky to write?</li>
+          </p>
+            The program that we build consisted of both a software and hardware component. The software was the main focus of our project and was built around the Raspberry Pi Pico board.
+            The software was built in C and was designed to run on the Pico board. The software was designed to be as efficient as possible in order to run on the limited resources of the Pico board.
+            The hardware consisted of the gaming controller. There were many more dynamics for the software to consider including but not limited to, the sprite movement physics, collision physics with blocks, drawing the level out, maximizing efficiency by minimizing computations needed per frame, calculation and drawing statistics, detecting a game over when Mario hits a goomba, runs out of time, or falls below a certain y coordinate, resetting to rebegin the level, transitioning between frames to give the illusion of movement, and drawing the level data.
+            The hardware was much simpler and consisted of the Pico board, a VGA output, and a custom controller. The controller was built using three buttons, one for left, one for right, and one for jumping. These buttons interacted with the software by sending a signal to the Pico board when they were pressed and in this way interacted with our software.
+            The trickiest parts were elaborated on more int he external code and design portion but included creating the maximum efficiency for our program, ensuring that the collisions of Mario were tight enough to squeeze through one block gaps, and that the flickering of the characters and the level background screen would not be apparent while at the same time still maintaining the illusion of movement.
+          </p>
         <li><strong>Hardware details:</strong> How to reproduce your setup</li>
+          </p>
+            While a majority of our program focused on the software side of things, we did have to consider the hardware as well. We used a Raspberry Pi Pico 2040 board to run our game. Some of the output pins were used for connecting to our VGA in the same configuration that was used for lab 2. The wires were connected through a resistor that would feed into inputs on the VGA cord. For a further description, you can read the Lab 2 manual. 
+            We stuck to 4 bit colors for the VGA output, which was a limitation of the Pico board. This meant that we had red, blue and a light and dark green color to produce our color combination. We could have adjusted our resistor values if we needed slightly altered color values but we found that the available colors and breadth of colors was sufficient.
+            The other main hardware consideration was the custom controller that we had built. This was done by using three buttons, one for left, right, and jumping that we found that were similar to the ones that would be used for a gaming controller. I soldered wires to the two leads of each button, one for ground and one for the high output. Using a block of wood, I drilled three holes for the buttons to be placed into. The wires out of the buttons were fed through these holes and the buttons were hot glued into place for stability. The ground wires were soldered together and another ground wire coming off of the juntion was connected to the Pico ground pin. The other wires were attached the their respective GPIO pins at 12, 13, and 14.
+            A reset button was also created in a similar manner with a wire from one side connecting to the same ground rail and the other connecting the GPIO 15 input. The software would then look at the value of each of these GPIO pins. Since the Pico already has an internal resistor for each GPIO pin, there was no need for a more complex configuration. The Pico board was powered by a USB-C cable that was connected to our laptop. This allowed both power and running our program.
+            For each of the buttons, they were considered active high which meant that when the button was pressed, a short was created through it and while it was not pressed, the voltage at the GPIO pin read zero as there was an open circuit for that portion.
+            Each movement and jump button triggered a special case in the movement physics file and the reset button would change the positoin of the sprites, reset the level data array back to the original version, reset all statistics back to zero, and reinitialize the game state. We now had a fully functioning controller that made testing easier and more enjoyable.
+          </p>
         <li><strong>External code/design:</strong> References to any third-party code</li>
+          </p>
+          In the design of our game, we had many consideratinos and challenges including constraints with the VGA, Raspberry Pi Pico, and difficulties with balancing game dynamics.
+          In order to get started we began by strategizing the best way to implement our game. We decided to create a file called leveldata that holds an array of characters for our level. The size of this array was originally 16 rows by 50 columns but was expanded to 16 rows by 421 columns as the level got larger.
+          We chose to use chars as the variable in each index of the array in order to conserve memory on the Pico as this was the lowest number of bytes per index that could be taken up. Each char corresponds to a specific tile in the game. Each tile is a 30 by 30 pixel array that could be drawn. This took advantage of the block design of the original Mario game to simplify the development process.
+          There was a large case statement that was used to determine which tile to draw in each space on the VGA screen and logic to determine which portion of memory to read out of. In order to do this, we created attributes to each of our structs called world_x. This was different than the local positions that would dictate where on the screen the different structs would be drawn. This world_x variable was passed into a function that looked half a screen width to the left and right, pulling the tile locations out of the level data array that would be shown just in that region. This improved the processing speed of our game as not only the tiles that needed to be drawn were drawn.
+          Now that the level was set up to print onto the VGA screen, we had to figure out how to update what was being shown for the level background as the screen scrolls. Initially, this was tricky because there wouuld be a flickering effect from our original approach of blanking out the VGA screen and redrawing the level in the new position. The same approach was taken for the Mario character to prevent his flickering, only blanking out the pixels that were not in the new frame location for Mario.
+          This cause a flashing effect each time that the frames moved on that was not desirable and degraded the user experience. In order to first solve this, we changed it so that the screen was only blanking and redrawing each time that the Mario character was moving to the right and new data was needed to be drawn. From a high level overview, this prevented flashing when there was no new level data needing to be shown. The rectangle was calculating using this check method and then setting the width of the rectangle to the speed of the character in that direction and the height of the rectangle to the tile height for maximumum drawing efficiency. The phrase of blanking out means that a blue rectangle was drawn over the VGA pixels that we no longer wanted to show, blending in with the already blue sky background color.
+          Solving the issue of flashing as Mario moved right and new level data was needed to be drawn was tricky. In order to successfully mitigate it, we decided to provide a conditional check with our level data so that as the tiles would slide over, providing the illusion of Mario moving across the level, the new level would redraw over the old blocks and only the portion of the old frame background that did not overlap with the new one would be blanked out. This would be when there was a sky tile directly to the right of a brick tile. In other cases, there was no need to blank out the tile. Once we removed that, the flashing of the background had stopped.
+          There was still an ongoing problem with the processing speed of the VGA and the Pico board that impacted the movement speed of Mario. In parts of the level and development phases were many pixels were being drawn on the screen, it would take longer between frames, making Mario to appear to slow down. In order to solve this, we overclocked the Pico to 250 MHz. This was the maximum speed that the Pico could be overclocked to without damaging the board. This allowed for a much smoother experience and made it so that Mario was not slowed down by the processing speed of the VGA and Pico. In order to further reduce the apparent difference, we also tried to even out the tiles that were being drawn in each segment of the level and improved the efficiency of the redrawing function like described before.
+          With the level data and the background drawing function working, we needed to implement the Mario character. This was done by creating a struct that held all of the information about Mario including his position, velocity, and whether or not he was alive. This struct was then used to determine where Mario was on the screen and what he should look like. The struct was updated each frame based on the input from the buttons and the physics of the game. The struct was also used to determine if Mario was colliding with any of the blocks in the level. This part was tricky because the logic for the background meant that if we were starting Mario at different places, the collision detection would differ. We decided to fix his starting location for the remainder of testing. It was also crucial to maximize the efficacy of the collision detection. 
+          This meant that through trial and error, we had to determine where the edge pixel of the Mario character box could go before it is detected to hit a tile. This was done by checking the tile type that the edge of the box was in. We also implemented logic for collecting coins and keeping score. When a coin was collected, the score would increase by 10 points. This occured when the top of the Mario box was determined to come in contact with the bottom of a question mark box, one of the tile types that was defined.
+          When the question mark box was hit, the tile type would change to a deactivated question mark box. This was done by changing the char in the level data array to a different char that was defined in the case statement. This was done so that the tile would not be drawn again and would not be able to be hit again. The logic for this was tricky because it had to be determined if Mario was in contact with the bottom of the box or if he was just above it. This was done by checking the position of Mario and the tile type that he was in contact with.
+          If he was in contact with the bottom of the box, then the tile type would change and the score would increase. If he was just above it, then the tile type would not change and the score would not increase. This was done to prevent Mario from being able to hit the box multiple times and to make sure that he could only collect coins once. Each time that the question mark box was hit, the coin sprite would be initialized and draw and it's velocity would move it upwards. I added a certain number of frames that it would be shown for and then it would despawn. I also made it so that if two coins were collected at the same point, the first one would despawn to prevent any issues from overwriting.
+          The last part of the game was to implement the Goomba enemy. This was done by creating a struct that held all of the information about the Goomba including its position, velocity, and whether or not it was alive. This struct was then used to determine where the Goomba was on the screen and what it should look like. The struct was updated each frame based on the physics of the game. The struct was also used to determine if the Goomba was colliding with any of the blocks in the level. This part was tricky because we had to determine where the edge pixel of the Goomba character box could go before it is detected to hit a tile. This was done by checking the tile type that the edge of the box was in. We also implemented logic for killing the Goomba and keeping score. When a Goomba was killed, the score would increase by 20 points. This occured when Mario's box came in contact with the top of a Goomba box, one of the sprite types that was defined.
+          When a Goomba is killed, it will disappear from the screen and will not be able to be hit again. The logic for this was tricky because it had to be determined if Mario was in contact with the top of the box or if he was just above it. This was done by checking the position of Mario and the position of the Goomba sprite box around it to see if there was any overlap and if so which parts were overlapping.
+          In order to spawn in the Goombas, the structs had both a local position and the initialization of them took in the world_x value. When Mario was at a certain world_x value, the Goombas would spawn on the ground and would be tracked until they died if Mario stomped them.
+          For Mario to die or lose the game, we added a flag for game over that would be triggered by hitting the side of a Goomba, running out of time on the timer we created to count down (which was also displayed at the top of the screen), or falling below a certain y coordinate. This was done by tracking the local y_position of the Mario character sprite.
+          All of the tiles and sprites were original designs that were created by us. Each char in the level data corresponded to a draw function that looked at a 30 by 30 pixel array that was defined in the drawtile.c file. This was done so that we could easily change the design of the tiles and sprites without having to change the logic of the game. The colors were also defined in a separate file so that we could easily change the colors of the tiles and sprites without having to change the logic of the game. This made it easy to change the design of the game without having to change the logic of the game.
+          In a similar manner, the sprites had different frames that would be alternated between that gave the illusion of movement. This was done by creating different 30 by 30 pixel image arrays that the frames would cycle between. For Mario, the cycles were direction specific and would cycle between Mario facing different directions depending on his velocity.
+          The entire game was single threaded due to the complex nature of the physics and movements being very intertwined. We also didn't find the need for a second core or using interrupts after solving the issue of flickering and overclocking the system.
+          </p>
         <li><strong>Dead ends:</strong> Things you tried that didn’t work</li>
+          </p>
+            Despite having many challenges throughout the project, we were able to solve most of them. The main issues that we had were with the flickering of the screen and the speed of Mario. We were able to solve the flickering by changing the way that we blanked out the screen and redrew it. We also solved the speed issue by overclocking the Pico board and optimizing the drawing functions.
+            There were a couple of dead ends that were not really consequential for the end result of our project and within the negligible limitations that we were willing to tolerate. For example, the speed of Mario was being limited due to the computationally intensive nature of constantly drawing on the VGA screen. However, after overclocking and optimizing the drawing functions, we were able to get the speed of Mario to be fast enough for our liking. If further improvements are to be made, this is something to look out for.
+            Another dead end was the collision detection. We had to spend a lot of time trying to figure out how to get the collision detection to work properly. We ended up having to use a lot of trial and error to get it to work properly. This was not ideal but we were able to get it to work in the end for the tolerance that we wanted. There are still some cases where Mario is unable to squeeze through small block gaps or the detection of the Goomba collision is not perfect but by designing the level in a calculated way, we were able to reduce the impact of this to negligible levels.
+          </p>
       </ul>
     </section>
 
@@ -181,14 +222,47 @@
     <section id="conclusions">
       <h2>Conclusions</h2>
       <ul>
-        <li>How results met (or didn’t meet) your expectations</li>
-        <li>What you’d change next time</li>
-        <li>Standards compliance</li>
-        <li>Intellectual property considerations:
+        <li><strong>How results met (or didn’t meet) your expectations</strong></li>
+          </p>
+            The end result from our project was a nearly perfect recreation of what we expected from the original Super Mario Bros game first level. We were able to get active statistics, a moving character, interaction with blocks, collecting coins, interacting with Goombas, winning and losing, and resetting to play again.
+            From that perspective, every result that we had set for ourselves was met.
+            There are a few additional items that were not critical to a minimum viable product of the game that we wish we could have implemented but had ran out of time to do. 
+            This included adding a sound for the Mario game and for the different interactions. We would likely have had used an alternate soundtrack for copywrite considerations but the process of setting it up would have been similar to the sound channels that we used in the Lab 1 setup.
+            We also would have liked to add other enemies and powerups to the game. This would have included a mushroom that would have made Mario grow larger and be able to stomp on Goombas without dying. It also would have included an invincibility star and koopa troopas. The reason we did not include these is that each one would have required additional collision detection and sprite drawing functions that would have taken a lot of time to implement. However, the functionality example is all there already with the other sprites we did end up using meaning we certainly had the capability of doing it.
+          </p>
+        <li><strong>What you’d change next time</strong></li>
+          </p>
+            If we were to do this project again, we would have liked to have added sound and more enemies. We would also have liked to have added more levels and powerups. 
+            We would also have liked to have added a better way to handle the collision detection. This would have made it easier to add new enemies and powerups in the future. This could have been done by being more careful with the drawing for the Mario character so that the pixels that were seen for Mario aligned with the edges of his hitbox so that tthe trial and error process could have been refined. 
+            We would also have liked to have added a better way to handle the drawing of the level. This would have made it easier to add new levels in the future. I wish that from the beginning, we had taken the approach of maximum efficiency with our drawings. This would have prevented needing to toil over different techniques to eliminiate the flickering for the character and the background tiles. I also would have kept the backtround drawing separate from the movement and collision detection so that we could have used both cores of the Pico board to speed up the processing even further.
+            We should have also designed a better conroller. While the functionality of the controller was complete with no flaws, I wish we had bought parts in advance to design a more professional looking controller similar to the Gameboy original handheld design that we were trying to recreate.
+          </p>
+        <li><strong>Standards compliance</strong></li>
+
+          </p>
+            The project was designed to be as compliant as possible with the original Super Mario Bros. game. We used similar level design, character design, and game mechanics as the original game with our own twists on them to prevent intellectual property considerations. This included diffrent looking sprites and tiles, different colors, and slightly different movement speeds and physics.
+            The construction was also in compliance with engineering development standards in which we used a methodical testing process that we kept well documented and tracked to ensure that the project was both completed on time, throroughly tested for corner cases, and that we were able to reproduce the results that we set out to achieve.
+            The project was also designed to be as efficient as possible with the limited resources of the Pico board. We used a single core for the entire project and used protothreads to handle the different tasks that needed to be done. This made it easier to manage the different tasks and made it easier to add new features in the future.
+          </p>
+        </p>
+<br>
+<strong>Intellectual property considerations:</strong>
+<br>
+<br>
+<p>
           <ul>
-            <li>Did you reuse or reverse-engineer any design?</li>
-            <li>Non-disclosure agreements or patent issues?</li>
-            <li>Any opportunities for patenting your work?</li>
+            <li><strong>Did you reuse or reverse-engineer any design?</strong></li>
+              </p>
+                The main reusing and reverse-engineering was from our Lab 2 design with the Galton board. We used this to determine how to connect the VGA to the Raspberry Pi Pico board. We also used this in order to determine how to set the draw functions for the screen and creating our own colors to use. Besides this basic understanding, there was very little that was reused apart from any graphic inspirations we used in designing the aesthetics of the level tiles and the sprites.
+              </p>
+            <li><strong>Non-disclosure agreements or patent issues?</strong></li>
+              </p>
+                There are no non-disclosure agreements regarding this. There should be no patent issues considering that the patent for the original game design is likely expired considering thet time that has passed and the graphics and movements, while inspired from the original Super Mario Bros, was not a direct copy of the game with our own unique twists added on top.
+              </p>
+            <li><strong>Any opportunities for patenting your work?</strong></li>
+              </p>
+                There is no opportunities for patenting our work.
+              </p>
           </ul>
         </li>
       </ul>
@@ -197,11 +271,10 @@
     <!-- Appendix -->
     <section id="appendix">
       <h2>Appendix A: Permissions</h2>
-      <p>This is the Cornell-required opt-in statement for inclusion on the course page:</p>
+      <p>The group approves this report for inclusion on the course website.</p>
       <p>
-        <label><input type="radio" name="opt" disabled> The group approves this report for inclusion on the course website.</label><br>
+        The group approves the video for inclusion on the course youtube channel.<br>
       </p>
-      <p><em>(Remember: if you don’t opt-in, you lose 5 points!)</em></p>
     </section>
   </main>
 
