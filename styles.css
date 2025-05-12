@@ -70,3 +70,28 @@ img {
   height: auto;
   display: block;    /* prevents inline “whitespace” gaps */
 }
+
+/* =========================================
+   Paragraph spacing
+   ========================================= */
+p {
+  /* space before & after every <p> */
+  margin: 1rem 0;
+  /* Optional: improve readability */
+  line-height: 1.6;
+}
+
+/* =========================================
+   Figure spacing
+   ========================================= */
+figure {
+  /* space above and below each <figure> */
+  margin: 2rem 0;
+}
+
+/* Optional: a little breathing room for captions */
+figure figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
