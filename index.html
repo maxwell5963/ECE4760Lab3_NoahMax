@@ -63,12 +63,17 @@
         To create the illusion of a scrolling world much larger than the 640×480 display, we maintain a single “world_x” offset that follows Mario once he moves past the center threshold. Instead of moving Mario
         past that point, we shift the viewport by the same amount he would have moved, then redraw only the tiles and sprites visible in the new window. This technique keeps Mario visually centered while the 
         background glides by. Enemy Goombas use the same gravity-and-bounce rules as Mario, plus a constant patrol speed that reverses whenever they hit a wall; their sprite frames advance on a simple timer so 
-        that their walking animation stays in sync with the game’s 60 Hz update loop.
+        that their walking animation stays in sync with the game’s 60 Hz update loop. In order to prevent flashing and lag, we had to tweak the way we redraw.
+        For Mario, we realized that no matter what, the VGA will draw over old pixels; We used this to our advantage in our Mario animation. Instead of blueing
+        out the entire sprite, we only blue out the pixels that Mario was previously at that don't overlap with his current hitbox. That way, this avoids the 
+        blue flashing we were initially getting. To fix the lagginess of the scrolling and smooth that out, we only redraw pixels as fast as Mario moves,
+        rather than re-drawing everything. 
       </p>
         <li><strong>Logical structure:</strong></li>
         We organized our game into distinct modules for simplicty. Each file was coupled with its own header file for easy compatibility between modules. We repurposed the animation.c file from Lab 2 and used
         it to serve as our main file. We have dedicated files for drawing sprites, drawing tiles/screen, collision/movement physics, games states, struct handling, storing level data, as well as a colors
         header file where we define our own shorthand definitions for the provided colors to make our arrays cleaner and easier to write/read visually. A summary of each is provided in the table below. 
+        This modularity made the game much more manageable, and we kept adding more modules as we saw fit. 
       </p>
         <table>
   <thead>
@@ -147,13 +152,36 @@
 </p>
 Once we had all these arrays and draw functions declared, the next step was to make sure they looked as we intended on the VGA Screen.
 We devised a test palette of all the different game assets and printed it out on a blue screen so we could look for inconsistencies
-and get a sense of scale.
+and get a sense of scale. Below is this initial test palette. 
 </p>
 <body>
   <img src="images/testpalette.jpg" alt="Our Test Palette of Sprites and Tiles">
 </body>
 
       </p>
+      To intialize a new game, we created an initgame function. All it does it draw the level, spawn in Mario, the Goombas, set
+      Mario's starting position to the beginning, and reset the leveldata back to its default configuration. It initializes all 
+      the scoring values to their beginning configuration. It's a clean way of tying the entire game together in main. 
+      </p>
+    </p>
+    When the reset button is pressed, control jumps to a special reset block before the usual physics or game‐over logic. 
+    That block first kills any active coin, then clears the entire screen to the sky‐blue background. It calls init_game() 
+    to reinitialize scores, timers, and level data; recenters the viewport (world_x = 320.0f); and clears your game_over and 
+    game_over_drawn flags. The frame_counter is zeroed to restart the physics cadence, and the level is redrawn. Mario is 
+    re‐initialized to his starting coordinates, and the Protothread timer is re‐initialized so your 1 Hz scheduling starts fresh. 
+    Finally, any Goomba “alive” flags and spawn booleans are all reset to false, ensuring that no enemies carry over from the previous 
+    run. The function then immediately continues the loop, effectively jumping back up to the top and beginning a brand‐new game frame.
+    This is the same logic that is called when the game_over state is triggered, except the game_over screen pops up instead of
+    re-drawing the level.
+  </p>
+      </p>
+      The scoring and timer mechanics are very straightforward. For scoring, whenever Mario hits a mystery box, a short coin animations
+      goes off, and coins increase by 1 while score increases by 10. The titles for the scoreboard are initialized once at the beginning
+      of the game and stay permanently; We avoid redrawing the top ~90 pixels of the screen in order to prevent the scoreboard from getting
+      deleted. When mario destroys a goomba, he gets +20 score. At the end of the game, spare time is added to score and a game over
+      screen reads out the coin and score totals. To prevent Mario and Coins from accidentally overwriting the scoreboard, we cap their maximum positions at 90 by forcing 
+      their velocities to zero (and in the case of the coin, despawning it) when they get to this height. The timer is a simple counter
+      in its own thread, and it can be adjusted in the gameinit() function. We decided that 180 seconds was a reasonable starting time.
       </p>
         In terms of intellectual property considerations, all graphics (tiles, sprites) are coded from scratch with
         different color palettes and simplified shapes. We opted against including sound/music, but these could easily
@@ -219,18 +247,34 @@ and get a sense of scale.
 
   <p>
     We ended with a nearly spot-on recreation of the original Super Mario Bros. first level, with responsive physics and animations.
+    We successfully implemented all core game mechanics, including basic movement, interaction with the environment, and scoring.
+    Goombas run around the map, properly animated, and Mario can destroy them by stomping on them, or if he runs into them the game ends.
+    Mario can hit his head on brick blocks and mystery boxes to break them or collect coins, respectively. If mario falls out of the world,
+    the game ends, and at the end, spare time is added to the score. 
   </p>
   <p>
     We achieved smooth horizontal scrolling at a consistent 60 Hz, with all background flashing and flicker effectively eliminated.
+    Grate care was taken when designing the level to ensure it was not unreasonably difficult, and there's variation in terrain and 
+    obstacles. We have voids in the world, staircases, floating structures, a house/castle, parkour, a "pinball" like section, 
+    and a "temple." There's a variety of different layouts for coin spawn points; some involve the user having to break into a building
+    using the aforementioned brick-breaking mechanic in order to continue in the level. Some spots had to be tweaked to avoid the user 
+    breaking the game, for example in some of the void section, bricks had to be replaced with solid stair tiles in order to prevent 
+    the user from inadvertently breaking the path forward. 
   </p>
   <p>
     Memory usage remained well within the Pico’s 264 KB RAM constraints, leaving headroom for potential future features (e.g., sound, additional levels).
+    We initially thought we may have a memory constraint due to laggy scrolling and flashy animations, but these were instead pinned down 
+    to logical errors in how we constructed and re-drew the level. The game is rather immersive on its own without sound.
   </p>
   <p>
     Our custom controller interface proved intuitive and reliable in testing, though the solder-and-wood construction is somewhat delicate.
+    If the user isn't careful, the wires can get yanked from the breadboard. The reset button on the breadboard is a bit crude but it works well; We experimented with a reset button 
+    on the controller itself but we could not find one that wasn't a toggle-button. The larger, more ergonomic buttons are user-friendly 
+    and 
   </p>
   <p>
-    User testing confirmed high usability: players found controls responsive and enjoyed the authentic retro experience.
+    User testing confirmed high usability: players found controls responsive and enjoyed the authentic retro experience, including Professor Adams.
+    We allowed some of our friends to try the game as well and all were throroughly impressed and found no issues in playing the game.
   </p>
 
   <figure>
