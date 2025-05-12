@@ -69,6 +69,23 @@
         blue flashing we were initially getting. To fix the lagginess of the scrolling and smooth that out, we only redraw pixels as fast as Mario moves,
         rather than re-drawing everything. 
       </p>
+    </p>
+    One of the things that we really took to heart on recreating mario was the graphics. In order to create accurate sprites and tiles that 
+    were true to the original, Max first downloaded the app PixilArt on his iPad. He was then able to carefully, pixel-by-pixel draw out 
+    the sprites and tiles to figure out exactly which color each pixel needed to be. The next step was to convert them into Python numpy 
+    arrays in order to easily print them out. Since Python and C Arrays were easily converted between one another, this was an easy means 
+    of testing how the graphics were coming along. Yes- Each pixel was hand-coded for every sprite and yes- it took forever!
+    </p>
+
+    <figure>
+    <img src="images/coin.jpg" alt="Example image from Pixilart for the coin.">
+    <figcaption>Figure 1: Example image from Pixilart for the coin.</figcaption>
+  </figure>
+
+      <figure>
+    <img src="images/testbench.png" alt="Testing the sprites/tiles on Jupyter Notebook">
+    <figcaption>Figure 2: Testing the sprites/tiles on Jupyter Notebook.</figcaption>
+  </figure>
         <li><strong>Logical structure:</strong></li>
         We organized our game into distinct modules for simplicty. Each file was coupled with its own header file for easy compatibility between modules. We repurposed the animation.c file from Lab 2 and used
         it to serve as our main file. We have dedicated files for drawing sprites, drawing tiles/screen, collision/movement physics, games states, struct handling, storing level data, as well as a colors
@@ -154,9 +171,10 @@ Once we had all these arrays and draw functions declared, the next step was to m
 We devised a test palette of all the different game assets and printed it out on a blue screen so we could look for inconsistencies
 and get a sense of scale. Below is this initial test palette. 
 </p>
-<body>
-  <img src="images/testpalette.jpg" alt="Our Test Palette of Sprites and Tiles">
-</body>
+  <figure>
+    <img src="images/testpalette.jpg" alt="The test palette of sprites and tiles. Note: Green blocks represent pipes, which were scrapped.">
+    <figcaption>Figure 3: The test palette of sprites and tiles. Note: Green blocks represent pipes, which were scrapped..</figcaption>
+  </figure>
 
       </p>
       To intialize a new game, we created an initgame function. All it does it draw the level, spawn in Mario, the Goombas, set
@@ -211,6 +229,16 @@ and get a sense of scale. Below is this initial test palette.
             For each of the buttons, they were considered active high which meant that when the button was pressed, a short was created through it and while it was not pressed, the voltage at the GPIO pin read zero as there was an open circuit for that portion.
             Each movement and jump button triggered a special case in the movement physics file and the reset button would change the positoin of the sprites, reset the level data array back to the original version, reset all statistics back to zero, and reinitialize the game state. We now had a fully functioning controller that made testing easier and more enjoyable.
           </p>
+
+              <figure>
+    <img src="images/controllerfront.JPG" alt="Our controller design. Very high-tech!">
+    <figcaption>Figure 4: Our controller design. Very high-tech!.</figcaption>
+  </figure>
+
+                <figure>
+    <img src="images/breadboard.JPG" alt="breadboard">
+    <figcaption>Figure 5: Our breadboard setup; Rather simple, just the usual VGA hardware plus controller inputs.</figcaption>
+  </figure>
         <li><strong>External code/design:</strong> References to any third-party code</li>
           </p>
           In the design of our game, we had many consideratinos and challenges including constraints with the VGA, Raspberry Pi Pico, and difficulties with balancing game dynamics.
