@@ -43,6 +43,7 @@
 
     <section id="gameplay-video">
   <h2>Quick Gameplay Preview</h2>
+<figure id="gameplay-video" style="max-width:100%; margin:2em auto; text-align:center;">
   <video
     src="images/demo.mov"
     autoplay
@@ -52,9 +53,15 @@
     controls
     style="max-width:100%; height:auto; border:2px solid #ccc; border-radius:8px;"
   >
-    <!-- Fallback for browsers that don’t support .mov -->
-    Your browser doesn’t support this video format.
+    <source src="images/demo.mp4" type="video/mp4">
+    <source src="images/demo.mov" type="video/quicktime">
+    Your browser doesn’t support HTML5 video.
   </video>
+  <figcaption style="font-size:0.9rem; color:#666; margin-top:0.5em;">
+    Figure 1: 11-second gameplay loop of Level 1. Core functionality is demonstrated, including goombas, coin collection,
+    basic movement, and falling out of the world. 
+  </figcaption>
+</figure>
 </section>
 
 
