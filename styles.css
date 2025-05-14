@@ -28,9 +28,18 @@ body {
 h1 {
   font-family: var(--heading-font);
   font-size: 2.5rem;
-  color: var(--mario-red);
+  color: var(--mario-yellow);
   text-shadow: 2px 2px var(--mario-gray);
   margin-bottom: 0.5rem;
+}
+
+header nav ul {
+  list-style: none;           /* no bullets */
+  margin: 0;                  /* pull in any default margins */
+  padding: 0;                 /* pull in any default padding */
+  display: flex;              /* horizontal layout */
+  justify-content: center;    /* center your links */
+  gap: 1rem;                  /* space them out */
 }
 
 /* =================================
@@ -53,6 +62,17 @@ nav a {
 nav a:hover {
   color: var(--mario-yellow);
 }
+
+/* =================================
+   Constrain & Center Figures
+   ================================= */
+figure img {
+  max-width: 50%;           /* never wider than half the container */
+  height: auto;             /* keep aspect ratio */
+  display: block;           /* so margin auto works */
+  margin: 1rem auto;        /* 1rem top/bottom, auto left/right */
+}
+
 
 /* =================================
    Section Headings
