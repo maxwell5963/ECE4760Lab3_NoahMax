@@ -67,11 +67,13 @@ nav a:hover {
    Constrain & Center Figures
    ================================= */
 figure img {
-  max-width: 100%;           /* never wider than half the container */
-  height: auto;             /* keep aspect ratio */
-  display: block;           /* so margin auto works */
-  margin: 1rem auto;        /* 1rem top/bottom, auto left/right */
+  width: 100%;      /* fill the figure’s width */
+  max-width: none;  /* or just omit max-width altogether */
+  height: auto;     /* keep aspect ratio */
+  display: block;
+  margin: 1rem auto;
 }
+
 
 
 /* =================================
