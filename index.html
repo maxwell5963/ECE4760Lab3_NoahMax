@@ -41,6 +41,23 @@
     </p>
     </section>
 
+    <section id="gameplay-video">
+  <h2>Quick Gameplay Preview</h2>
+  <video
+    src="images/demo.mov"
+    autoplay
+    loop
+    muted
+    playsinline
+    controls
+    style="max-width:100%; height:auto; border:2px solid #ccc; border-radius:8px;"
+  >
+    <!-- Fallback for browsers that don’t support .mov -->
+    Your browser doesn’t support this video format.
+  </video>
+</section>
+
+
     <!-- High-Level Design -->
     <section id="design">
       <h2>High-Level Design</h2>
@@ -118,7 +135,8 @@
     </tr>
     <tr>
       <td><code>gamestates.c</code></td>
-      <td>Implements the state‐machine logic for transitioning between menus, play, and game‐over screens.</td>
+      <td>Implements the state‐machine logic for transitioning between menus, play, and game‐over screens. Also
+      defines the <code>init_game</code> function to start up the game</td>
     </tr>
     <tr>
       <td><code>drawsprites.h</code></td>
@@ -126,7 +144,8 @@
     </tr>
     <tr>
       <td><code>drawsprites.c</code></td>
-      <td>Contains routines to draw and animate Mario, Goombas, coins, and other moving objects.</td>
+      <td>Contains routines to draw and animate Mario, Goombas, coins, and other moving objects. Has 
+        convenience wrappers for each of these for easy access.</td>
     </tr>
     <tr>
       <td><code>drawscreen.h</code></td>
