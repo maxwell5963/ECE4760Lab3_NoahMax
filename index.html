@@ -203,10 +203,25 @@ Once we had all these arrays and draw functions declared, the next step was to m
 We devised a test palette of all the different game assets and printed it out on a blue screen so we could look for inconsistencies
 and get a sense of scale. Below is this initial test palette. 
 </p>
-  <figure>
-    <img src="images/testpalette.jpg" alt="The test palette of sprites and tiles. Note: Green blocks represent pipes, which were scrapped.">
-    <figcaption>Figure 3: The test palette of sprites and tiles. Note: Green blocks represent pipes, which were scrapped.</figcaption>
-  </figure>
+  <figure id="testpalette-vid" style="max-width:100%; margin:2em auto; text-align:center;">
+  <video
+    src="images/testpalettevid.mov"
+    autoplay
+    loop
+    muted
+    playsinline
+    controls
+    style="max-width:100%; height:auto; border:2px solid #ccc; border-radius:8px;"
+  >
+    <source src="images/testpalettevid.mp4" type="video/mp4">
+    <source src="images/testpalettevid.mov" type="video/quicktime">
+    Your browser doesn’t support HTML5 video.
+  </video>
+  <figcaption style="font-size:0.9rem; color:#666; margin-top:0.5em;">
+    Figure 3: Fully fleshed-out test palette, demonstrating proof-of-concept of tile/sprite output as well 
+    as basic animation of Goombas and Mario.
+  </figcaption>
+</figure>
 
       </p>
       To intialize a new game, we created an initgame function. All it does it draw the level, spawn in Mario, the Goombas, set
