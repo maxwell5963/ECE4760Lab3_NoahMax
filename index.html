@@ -363,6 +363,20 @@ and get a sense of scale. Below is this initial test palette.
             We would also have liked to have added a better way to handle the drawing of the level. This would have made it easier to add new levels in the future. I wish that from the beginning, we had taken the approach of maximum efficiency with our drawings. This would have prevented needing to toil over different techniques to eliminiate the flickering for the character and the background tiles. I also would have kept the backtround drawing separate from the movement and collision detection so that we could have used both cores of the Pico board to speed up the processing even further.
             We should have also designed a better conroller. While the functionality of the controller was complete with no flaws, I wish we had bought parts in advance to design a more professional looking controller similar to the Gameboy original handheld design that we were trying to recreate.
           </p>
+        <li><strong>Futures Considerations</strong></li>
+        </p>
+        If we were to pick back up on this project in the future, there's certainly plenty of room for expansion. The most obvious expansion path would be to 
+        add support for multiple levels. Considering each level is stored in its own array and loaded at runtime, this could be easily done without further resource allocation.
+        We could also aim for a more perfect recreation of the original Mario by adding the pipe tiles (draw stubs and concept art were created but ultimately scrapped 
+        when time ran low). We could also add power-ups (such as the Toadstool mushrooms and turtle), and more goombas. Sound was also at one point on the table, 
+        however this would have been rather involved due to the need to recreate sounds from scratch or source them from the public domain. The additional hardware 
+        considerations (such as audio output and the need to use the Pico's DAC) could be implemented fairly easily as in labs 1 and 2. We also could design 
+        a more professional and sophisticated game console. Instead of delicate wires plugged into a breadboard, we could mount the Pico and all hardware directly 
+        on a solderboard and contained everything in a box. We could 3D print our own controller or buy a kit for this purpose. To make the experience 
+        even more user-friendly, battery power could be implemented as well as a direct VGA plug on the console, avoiding having to plug in individual wires 
+        each time the user wishes to play. While our current implementation is a great prototype, there is plenty of room for creating a more polished product, 
+        and perhaps one of us will decide to take this on as a personal project in the future.
+      </p>
         <li><strong>Standards compliance</strong></li>
 
           </p>
